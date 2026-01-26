@@ -16,6 +16,7 @@ export default function FamilyPage() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [familyName, setFamilyName] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -68,9 +69,15 @@ export default function FamilyPage() {
 
   async function handleCreateFamily(e: React.FormEvent) {
     e.preventDefault()
-    if (!familyName.trim() || !currentUser) return
+    if (!familyName.trim()) return
+
+    if (!currentUser) {
+      setError('Profile not loaded. Please refresh the page.')
+      return
+    }
 
     setCreating(true)
+    setError(null)
 
     // Create family
     const { data: newFamily, error: familyError } = await supabase
@@ -81,6 +88,7 @@ export default function FamilyPage() {
 
     if (familyError || !newFamily) {
       console.error('Failed to create family:', familyError)
+      setError('Failed to create family: ' + (familyError?.message || 'Unknown error'))
       setCreating(false)
       return
     }
@@ -93,6 +101,7 @@ export default function FamilyPage() {
 
     if (profileError) {
       console.error('Failed to update profile:', profileError)
+      setError('Failed to update profile: ' + profileError.message)
       setCreating(false)
       return
     }
@@ -121,6 +130,11 @@ export default function FamilyPage() {
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleCreateFamily} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Family Name
