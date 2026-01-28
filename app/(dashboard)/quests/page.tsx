@@ -51,17 +51,41 @@ export default function QuestsPage() {
 
       setFamilyMembers(members || [])
 
-      // Fetch tasks for the selected date
+      // Fetch tasks for the selected date (including recurring tasks)
       const dateStr = toDateString(selectedDate)
-      let query = supabase
+      const dayOfWeek = selectedDate.getDay()
+
+      const { data: tasksData } = await supabase
         .from('tasks')
-        .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname)')
+        .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname), task_completions(id, completed_at)')
         .eq('family_id', profile.family_id)
-        .eq('due_date', dateStr)
+        .or(`and(due_date.eq.${dateStr},recurring.is.null),and(due_date.lte.${dateStr},recurring.neq.null)`)
         .order('created_at', { ascending: true })
 
-      const { data: tasksData } = await query
-      setTasks(tasksData || [])
+      // Filter and process tasks
+      const processedTasks = (tasksData || [])
+        .filter((task) => {
+          if (!task.recurring) return true
+          if (task.recurring === 'daily') return true
+          if (task.recurring === 'weekly' && task.due_date) {
+            const taskDate = new Date(task.due_date + 'T00:00:00')
+            return taskDate.getDay() === dayOfWeek
+          }
+          return true
+        })
+        .map((task) => {
+          // For recurring tasks, determine completion from task_completions for this date
+          if (task.recurring && task.task_completions) {
+            const completedToday = task.task_completions.some((tc) => {
+              const completionDate = tc.completed_at.split('T')[0]
+              return completionDate === dateStr
+            })
+            return { ...task, completed: completedToday }
+          }
+          return task
+        })
+
+      setTasks(processedTasks)
     }
 
     setLoading(false)
@@ -100,15 +124,17 @@ export default function QuestsPage() {
     const task = tasks.find((t) => t.id === taskId)
     if (!task) throw new Error('Task not found')
 
-    // Update task as completed
-    const { error: updateError } = await supabase
-      .from('tasks')
-      .update({ completed: true })
-      .eq('id', taskId)
+    // For non-recurring tasks, mark as completed on the task row
+    if (!task.recurring) {
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({ completed: true })
+        .eq('id', taskId)
 
-    if (updateError) throw updateError
+      if (updateError) throw updateError
+    }
 
-    // Create completion record
+    // Create completion record (with date for recurring task tracking)
     const { error: completionError } = await supabase
       .from('task_completions')
       .insert({

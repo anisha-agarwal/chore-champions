@@ -135,6 +135,7 @@ export type TaskCompletion = Database['public']['Tables']['task_completions']['R
 // Extended types with relations
 export type TaskWithAssignee = Task & {
   profiles: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'nickname'> | null
+  task_completions?: Pick<TaskCompletion, 'id' | 'completed_at'>[]
 }
 
 export type ProfileWithFamily = Profile & {
