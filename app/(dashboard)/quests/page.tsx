@@ -55,37 +55,57 @@ export default function QuestsPage() {
       const dateStr = toDateString(selectedDate)
       const dayOfWeek = selectedDate.getDay()
 
-      const { data: tasksData } = await supabase
+      // 1. Fetch one-time tasks for this date
+      const { data: oneTimeTasks } = await supabase
         .from('tasks')
-        .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname), task_completions(id, completed_at)')
+        .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname)')
         .eq('family_id', profile.family_id)
-        .or(`and(due_date.eq.${dateStr},recurring.is.null),and(due_date.lte.${dateStr},recurring.neq.null)`)
+        .eq('due_date', dateStr)
+        .is('recurring', null)
         .order('created_at', { ascending: true })
 
-      // Filter and process tasks
-      const processedTasks = (tasksData || [])
-        .filter((task) => {
-          if (!task.recurring) return true
-          if (task.recurring === 'daily') return true
-          if (task.recurring === 'weekly' && task.due_date) {
-            const taskDate = new Date(task.due_date + 'T00:00:00')
-            return taskDate.getDay() === dayOfWeek
-          }
-          return true
-        })
-        .map((task) => {
-          // For recurring tasks, determine completion from task_completions for this date
-          if (task.recurring && task.task_completions) {
-            const completedToday = task.task_completions.some((tc) => {
-              const completionDate = tc.completed_at.split('T')[0]
-              return completionDate === dateStr
-            })
-            return { ...task, completed: completedToday }
-          }
-          return task
-        })
+      // 2. Fetch recurring tasks that started on or before this date
+      const { data: recurringTasks } = await supabase
+        .from('tasks')
+        .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname)')
+        .eq('family_id', profile.family_id)
+        .lte('due_date', dateStr)
+        .not('recurring', 'is', null)
+        .order('created_at', { ascending: true })
 
-      setTasks(processedTasks)
+      // 3. Filter weekly recurring tasks by day of week
+      const filteredRecurring = (recurringTasks || []).filter((task) => {
+        if (task.recurring === 'daily') return true
+        if (task.recurring === 'weekly' && task.due_date) {
+          const taskDate = new Date(task.due_date + 'T00:00:00')
+          return taskDate.getDay() === dayOfWeek
+        }
+        return false
+      })
+
+      // 4. Get IDs of all recurring tasks to check completions
+      const recurringIds = filteredRecurring.map((t) => t.id)
+
+      // 5. Fetch completions for recurring tasks on the selected date
+      let completedTaskIds: Set<string> = new Set()
+
+      if (recurringIds.length > 0) {
+        const { data: completions } = await supabase
+          .from('task_completions')
+          .select('task_id')
+          .in('task_id', recurringIds)
+          .eq('completion_date', dateStr)
+
+        completedTaskIds = new Set((completions || []).map((c) => c.task_id))
+      }
+
+      // 6. Mark recurring tasks as completed/not for this specific date
+      const processedRecurring = filteredRecurring.map((task) => ({
+        ...task,
+        completed: completedTaskIds.has(task.id),
+      }))
+
+      setTasks([...(oneTimeTasks || []), ...processedRecurring])
     }
 
     setLoading(false)
@@ -134,13 +154,16 @@ export default function QuestsPage() {
       if (updateError) throw updateError
     }
 
-    // Create completion record (with date for recurring task tracking)
+    // Create completion record
+    // For recurring tasks, store the completion_date so we can query by date.
+    // completed_at keeps its database default (now()) for audit purposes.
     const { error: completionError } = await supabase
       .from('task_completions')
       .insert({
         task_id: taskId,
         completed_by: user.id,
         points_earned: task.points,
+        completion_date: task.recurring ? toDateString(selectedDate) : null,
       })
 
     if (completionError) throw completionError
@@ -218,6 +241,7 @@ export default function QuestsPage() {
         tasks={filteredTasks}
         onComplete={handleCompleteTask}
         emptyMessage="No quests for this day. Add one!"
+        dateKey={toDateString(selectedDate)}
       />
 
       {/* FAB */}

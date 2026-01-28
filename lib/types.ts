@@ -105,6 +105,7 @@ export type Database = {
           completed_by: string | null
           completed_at: string
           points_earned: number
+          completion_date: string | null
         }
         Insert: {
           id?: string
@@ -112,6 +113,7 @@ export type Database = {
           completed_by?: string | null
           completed_at?: string
           points_earned: number
+          completion_date?: string | null
         }
         Update: {
           id?: string
@@ -119,6 +121,7 @@ export type Database = {
           completed_by?: string | null
           completed_at?: string
           points_earned?: number
+          completion_date?: string | null
         }
       }
     }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
+import { toDateString } from '@/lib/utils'
 import { TIME_OF_DAY_OPTIONS, type Profile } from '@/lib/types'
 
 interface TaskFormProps {
@@ -46,7 +47,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
         time_of_day: timeOfDay,
         recurring,
         assigned_to: assignedTo,
-        due_date: selectedDate.toISOString().split('T')[0],
+        due_date: toDateString(selectedDate),
       })
 
       // Reset form

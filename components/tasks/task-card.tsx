@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
 import type { TaskWithAssignee } from '@/lib/types'
@@ -13,6 +13,11 @@ interface TaskCardProps {
 export function TaskCard({ task, onComplete }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
+
+  // Sync with prop when task data changes (e.g., navigating between days)
+  useEffect(() => {
+    setIsCompleted(task.completed)
+  }, [task.completed])
 
   async function handleComplete() {
     if (isCompleted || isCompleting) return
