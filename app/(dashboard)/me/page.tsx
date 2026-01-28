@@ -144,7 +144,7 @@ export default function MePage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
               />
             </div>
 
@@ -157,7 +157,7 @@ export default function MePage() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="e.g., Baby Bison, Panther"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
               />
               <p className="text-xs text-gray-500 mt-1">
                 A fun name to display on tasks

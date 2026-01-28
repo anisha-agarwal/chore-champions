@@ -82,7 +82,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
             placeholder="e.g., Clean your room"
           />
         </div>
@@ -95,7 +95,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none text-gray-900"
             placeholder="Optional details..."
           />
         </div>
@@ -108,7 +108,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
             <select
               value={points}
               onChange={(e) => setPoints(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
             >
               <option value={5}>5 points</option>
               <option value={10}>10 points</option>
@@ -126,7 +126,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
             <select
               value={timeOfDay}
               onChange={(e) => setTimeOfDay(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
             >
               {TIME_OF_DAY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -144,7 +144,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
           <select
             value={assignedTo || ''}
             onChange={(e) => setAssignedTo(e.target.value || null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
           >
             <option value="">Anyone</option>
             {familyMembers.map((member) => (
@@ -162,7 +162,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
           <select
             value={recurring || ''}
             onChange={(e) => setRecurring(e.target.value || null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
           >
             <option value="">One time only</option>
             <option value="daily">Daily</option>
