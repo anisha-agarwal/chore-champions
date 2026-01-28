@@ -145,7 +145,7 @@ export default function FamilyPage() {
                   onChange={(e) => setFamilyName(e.target.value)}
                   required
                   placeholder="e.g., The Smiths"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
                 />
               </div>
               <Button type="submit" disabled={creating} className="w-full">

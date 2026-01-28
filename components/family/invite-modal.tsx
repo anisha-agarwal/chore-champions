@@ -60,7 +60,7 @@ export function InviteModal({ isOpen, onClose, inviteCode }: InviteModalProps) {
               type="text"
               readOnly
               value={inviteLink}
-              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 truncate"
+              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-900 truncate"
             />
             <Button
               onClick={() => copyToClipboard(inviteLink)}
