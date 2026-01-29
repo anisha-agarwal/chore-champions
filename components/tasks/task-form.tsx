@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { toDateString } from '@/lib/utils'
-import { TIME_OF_DAY_OPTIONS, type Profile } from '@/lib/types'
+import { TIME_OF_DAY_OPTIONS, type Profile, type TaskWithAssignee } from '@/lib/types'
 
 interface TaskFormProps {
   isOpen: boolean
@@ -17,12 +17,13 @@ interface TaskFormProps {
     recurring: string | null
     assigned_to: string | null
     due_date: string | null
-  }) => Promise<void>
+  }, taskId?: string) => Promise<void>
   familyMembers: Profile[]
   selectedDate: Date
+  task?: TaskWithAssignee  // Optional: if provided, we're editing
 }
 
-export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDate }: TaskFormProps) {
+export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDate, task }: TaskFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [points, setPoints] = useState(10)
@@ -31,6 +32,28 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const isEditMode = !!task
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title)
+      setDescription(task.description || '')
+      setPoints(task.points)
+      setTimeOfDay(task.time_of_day)
+      setRecurring(task.recurring)
+      setAssignedTo(task.assigned_to)
+    } else {
+      // Reset form for create mode
+      setTitle('')
+      setDescription('')
+      setPoints(10)
+      setTimeOfDay('anytime')
+      setRecurring(null)
+      setAssignedTo(null)
+    }
+  }, [task])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,25 +71,27 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
         recurring,
         assigned_to: assignedTo,
         due_date: toDateString(selectedDate),
-      })
+      }, task?.id)
 
-      // Reset form
-      setTitle('')
-      setDescription('')
-      setPoints(10)
-      setTimeOfDay('anytime')
-      setRecurring(null)
-      setAssignedTo(null)
+      // Reset form only on create
+      if (!isEditMode) {
+        setTitle('')
+        setDescription('')
+        setPoints(10)
+        setTimeOfDay('anytime')
+        setRecurring(null)
+        setAssignedTo(null)
+      }
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create task')
+      setError(err instanceof Error ? err.message : isEditMode ? 'Failed to update task' : 'Failed to create task')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="New Quest">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? 'Edit Quest' : 'New Quest'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
@@ -185,7 +210,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
             disabled={loading || !title.trim()}
             className="flex-1"
           >
-            {loading ? 'Creating...' : 'Create Quest'}
+            {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Quest')}
           </Button>
         </div>
       </form>

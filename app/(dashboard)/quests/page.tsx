@@ -18,6 +18,7 @@ export default function QuestsPage() {
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<TaskWithAssignee | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
@@ -115,7 +116,7 @@ export default function QuestsPage() {
     fetchData()
   }, [fetchData])
 
-  async function handleCreateTask(taskData: {
+  async function handleSubmitTask(taskData: {
     title: string
     description: string
     points: number
@@ -123,18 +124,48 @@ export default function QuestsPage() {
     recurring: string | null
     assigned_to: string | null
     due_date: string | null
-  }) {
+  }, taskId?: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !currentUser?.family_id) throw new Error('Not authenticated')
 
-    const { error } = await supabase.from('tasks').insert({
-      ...taskData,
-      family_id: currentUser.family_id,
-      created_by: user.id,
-    })
+    if (taskId) {
+      // Update existing task
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: taskData.title,
+          description: taskData.description,
+          points: taskData.points,
+          time_of_day: taskData.time_of_day,
+          recurring: taskData.recurring,
+          assigned_to: taskData.assigned_to,
+          due_date: taskData.due_date,
+        })
+        .eq('id', taskId)
 
-    if (error) throw error
+      if (error) throw error
+      setEditingTask(null)
+    } else {
+      // Create new task
+      const { error } = await supabase.from('tasks').insert({
+        ...taskData,
+        family_id: currentUser.family_id,
+        created_by: user.id,
+      })
+
+      if (error) throw error
+    }
+
     fetchData()
+  }
+
+  function handleEditTask(task: TaskWithAssignee) {
+    setEditingTask(task)
+  }
+
+  function handleCloseForm() {
+    setIsFormOpen(false)
+    setEditingTask(null)
   }
 
   async function handleCompleteTask(taskId: string) {
@@ -240,6 +271,7 @@ export default function QuestsPage() {
       <TaskList
         tasks={filteredTasks}
         onComplete={handleCompleteTask}
+        onEdit={handleEditTask}
         emptyMessage="No quests for this day. Add one!"
         dateKey={toDateString(selectedDate)}
       />
@@ -255,11 +287,12 @@ export default function QuestsPage() {
       </button>
 
       <TaskForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleCreateTask}
+        isOpen={isFormOpen || !!editingTask}
+        onClose={handleCloseForm}
+        onSubmit={handleSubmitTask}
         familyMembers={familyMembers}
         selectedDate={selectedDate}
+        task={editingTask || undefined}
       />
     </div>
   )
