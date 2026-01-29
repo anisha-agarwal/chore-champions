@@ -8,9 +8,10 @@ import type { TaskWithAssignee } from '@/lib/types'
 interface TaskCardProps {
   task: TaskWithAssignee
   onComplete: (taskId: string) => Promise<void>
+  onEdit: (task: TaskWithAssignee) => void
 }
 
-export function TaskCard({ task, onComplete }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onEdit }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
 
@@ -109,15 +110,26 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           </div>
         </div>
 
-        {task.profiles && (
-          <div className="flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!isCompleted && (
+            <button
+              onClick={() => onEdit(task)}
+              className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              title="Edit quest"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+          )}
+          {task.profiles && (
             <Avatar
               src={task.profiles.avatar_url}
               fallback={task.profiles.nickname || task.profiles.display_name}
               size="sm"
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
