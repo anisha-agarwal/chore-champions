@@ -28,10 +28,8 @@ export default function JoinFamilyPage() {
       }
 
       const { data, error } = await supabase
-        .from('families')
-        .select('id, name')
-        .eq('invite_code', code)
-        .single()
+        .rpc('get_family_by_invite_code', { code })
+        .single<{ id: string; name: string }>()
 
       if (error || !data) {
         setError('Invalid or expired invite code')
