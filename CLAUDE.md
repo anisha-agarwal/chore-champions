@@ -55,6 +55,7 @@ lib/
 
 ## Git Workflow
 
-- Create a separate branch for each bug fix or feature
-- Open a PR for review
+- Each bug/feature gets its own branch linked to the GitHub issue (e.g., `fix/issue-10-invite-code`, `feature/issue-5-delete-task`)
+- Never commit directly to main
+- Open a PR for review, reference the issue number
 - Only merge after CI passes
