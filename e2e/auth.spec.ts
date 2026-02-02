@@ -11,6 +11,13 @@ test.describe('Login Page', () => {
     await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible()
   })
 
+  test('displays Google login button', async ({ page }) => {
+    await page.goto('/login')
+
+    await expect(page.getByText(/or continue with/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /google/i })).toBeVisible()
+  })
+
   test('has link to signup', async ({ page }) => {
     await page.goto('/login')
 
@@ -44,6 +51,13 @@ test.describe('Signup Page', () => {
     await expect(page.getByLabel(/email/i)).toBeVisible()
     await expect(page.getByLabel(/password/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /create account/i })).toBeVisible()
+  })
+
+  test('displays Google signup button', async ({ page }) => {
+    await page.goto('/signup')
+
+    await expect(page.getByText(/or continue with/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /google/i })).toBeVisible()
   })
 
   test('has link to login', async ({ page }) => {
