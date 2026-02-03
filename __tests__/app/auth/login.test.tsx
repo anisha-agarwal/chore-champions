@@ -71,6 +71,39 @@ describe('Login Page', () => {
     expect(await screen.findByText(/google login failed/i)).toBeInTheDocument()
   })
 
+  it('renders Facebook login button', () => {
+    render(<LoginPage />)
+
+    expect(screen.getByRole('button', { name: /facebook/i })).toBeInTheDocument()
+  })
+
+  it('calls signInWithOAuth when Facebook button is clicked', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: null })
+    render(<LoginPage />)
+
+    const facebookButton = screen.getByRole('button', { name: /facebook/i })
+    await userEvent.click(facebookButton)
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'facebook',
+      options: {
+        redirectTo: expect.stringContaining('/auth/callback'),
+      },
+    })
+  })
+
+  it('shows error when Facebook login fails', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      error: { message: 'Facebook login failed' }
+    })
+    render(<LoginPage />)
+
+    const facebookButton = screen.getByRole('button', { name: /facebook/i })
+    await userEvent.click(facebookButton)
+
+    expect(await screen.findByText(/facebook login failed/i)).toBeInTheDocument()
+  })
+
   it('calls signInWithPassword on form submit', async () => {
     mockSignInWithPassword.mockResolvedValue({ error: null })
     render(<LoginPage />)
