@@ -72,6 +72,39 @@ describe('Signup Page', () => {
     expect(await screen.findByText(/google signup failed/i)).toBeInTheDocument()
   })
 
+  it('renders Facebook signup button', () => {
+    render(<SignupPage />)
+
+    expect(screen.getByRole('button', { name: /facebook/i })).toBeInTheDocument()
+  })
+
+  it('calls signInWithOAuth when Facebook button is clicked', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: null })
+    render(<SignupPage />)
+
+    const facebookButton = screen.getByRole('button', { name: /facebook/i })
+    await userEvent.click(facebookButton)
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'facebook',
+      options: {
+        redirectTo: expect.stringContaining('/auth/callback'),
+      },
+    })
+  })
+
+  it('shows error when Facebook signup fails', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      error: { message: 'Facebook signup failed' }
+    })
+    render(<SignupPage />)
+
+    const facebookButton = screen.getByRole('button', { name: /facebook/i })
+    await userEvent.click(facebookButton)
+
+    expect(await screen.findByText(/facebook signup failed/i)).toBeInTheDocument()
+  })
+
   it('calls signUp on form submit', async () => {
     mockSignUp.mockResolvedValue({ error: null })
     render(<SignupPage />)
