@@ -43,15 +43,36 @@ test.describe('Login Page', () => {
 })
 
 test.describe('Signup Page', () => {
-  test('displays signup form', async ({ page }) => {
+  test('displays signup form with role selector', async ({ page }) => {
     await page.goto('/signup')
 
     await expect(page.getByRole('heading', { name: /chore champions/i })).toBeVisible()
     await expect(page.getByText(/join the family adventure/i)).toBeVisible()
     await expect(page.getByLabel(/display name/i)).toBeVisible()
+    await expect(page.getByText('I am a...')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Parent' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Kid' })).toBeVisible()
     await expect(page.getByLabel(/email/i)).toBeVisible()
     await expect(page.getByLabel(/password/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /create account/i })).toBeVisible()
+  })
+
+  test('role selector defaults to Kid', async ({ page }) => {
+    await page.goto('/signup')
+
+    const kidButton = page.getByRole('button', { name: 'Kid' })
+    await expect(kidButton).toHaveClass(/bg-purple-600/)
+  })
+
+  test('can select Parent role', async ({ page }) => {
+    await page.goto('/signup')
+
+    const parentButton = page.getByRole('button', { name: 'Parent' })
+    await parentButton.click()
+    await expect(parentButton).toHaveClass(/bg-purple-600/)
+
+    const kidButton = page.getByRole('button', { name: 'Kid' })
+    await expect(kidButton).not.toHaveClass(/bg-purple-600/)
   })
 
   test('displays Google and Facebook signup buttons', async ({ page }) => {
@@ -107,5 +128,30 @@ test.describe('Join Family Page', () => {
 
     await expect(page.getByRole('link', { name: /create a new family/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible()
+  })
+})
+
+test.describe('Role Selector', () => {
+  test('role selector works on signup page', async ({ page }) => {
+    await page.goto('/signup')
+
+    // Kid is selected by default
+    const kidButton = page.getByRole('button', { name: 'Kid' })
+    const parentButton = page.getByRole('button', { name: 'Parent' })
+
+    await expect(kidButton).toHaveClass(/bg-purple-600/)
+    await expect(parentButton).not.toHaveClass(/bg-purple-600/)
+
+    // Click Parent
+    await parentButton.click()
+
+    await expect(parentButton).toHaveClass(/bg-purple-600/)
+    await expect(kidButton).not.toHaveClass(/bg-purple-600/)
+
+    // Click Kid again
+    await kidButton.click()
+
+    await expect(kidButton).toHaveClass(/bg-purple-600/)
+    await expect(parentButton).not.toHaveClass(/bg-purple-600/)
   })
 })
