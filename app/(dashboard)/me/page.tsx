@@ -117,41 +117,48 @@ export default function MePage() {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <header className="text-center">
+    <div className="p-4 space-y-6 max-w-2xl mx-auto">
+      {/* Horizontal Header */}
+      <header className="flex items-center gap-6">
+        {/* Avatar on left */}
         <button
           onClick={() => setIsAvatarOpen(true)}
-          className="relative inline-block"
+          className="relative flex-shrink-0 group"
         >
           <Avatar
             src={profile.avatar_url}
             fallback={profile.nickname || profile.display_name}
             size="xl"
-            className="w-24 h-24 mx-auto"
+            className="w-48 h-48"
           />
-          <span className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
+          <span className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-white text-xs font-medium">Change</span>
           </span>
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 mt-4">
-          {profile.nickname || profile.display_name}
-        </h1>
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <span className="text-2xl font-bold text-purple-600">{profile.points}</span>
-          <span className="text-gray-600">points</span>
+
+        {/* Name and info in middle */}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {profile.nickname || profile.display_name}
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-lg font-semibold text-purple-600">{profile.points}</span>
+            <span className="text-gray-500">points</span>
+          </div>
+          <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm mt-2">
+            {profile.role === 'parent' ? 'Parent' : 'Kid'}
+          </span>
         </div>
-        <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm mt-2">
-          {profile.role === 'parent' ? 'Parent' : 'Kid'}
-        </span>
+
       </header>
 
+      {/* Two-column form */}
       <Card>
-        <CardContent className="p-4">
-          <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-1">
+        <CardContent className="p-6">
+          <form id="profile-form" onSubmit={handleSave} className="space-y-5">
+            {/* Display Name row */}
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm font-medium text-gray-500 text-right">
                 Display Name
               </label>
               <input
@@ -159,47 +166,54 @@ export default function MePage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
               />
             </div>
 
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-1">
+            {/* Nickname row */}
+            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+              <label className="text-sm font-medium text-gray-500 text-right pt-2">
                 Nickname
               </label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="e.g., Baby Bison, Panther"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                A fun name to display on tasks
-              </p>
+              <div>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="e.g., Baby Bison, Panther"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  A fun name to display on tasks
+                </p>
+              </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-4">
-                <label className="text-base font-medium text-gray-700">
-                  Role
-                </label>
+            {/* Role row */}
+            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+              <label className="text-sm font-medium text-gray-500 text-right pt-2">
+                Role
+              </label>
+              <div>
                 <RoleSelector
                   selected={role}
                   onChange={setRole}
                   disabled={profile.role === 'parent' && parentCount <= 1}
                 />
+                {profile.role === 'parent' && parentCount <= 1 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    You are the only parent in this family and cannot change your role.
+                  </p>
+                )}
               </div>
-              {profile.role === 'parent' && parentCount <= 1 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  You are the only parent in this family and cannot change your role.
-                </p>
-              )}
             </div>
 
-            <Button type="submit" disabled={saving} className="w-full">
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
+            {/* Save button */}
+            <div className="flex justify-center pt-2">
+              <Button type="submit" disabled={saving} className="px-8">
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

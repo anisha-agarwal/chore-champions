@@ -163,4 +163,100 @@ describe('Me Page', () => {
     expect(kidButton).not.toBeDisabled()
     expect(parentButton).not.toBeDisabled()
   })
+
+  it('displays points in header', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('100')).toBeInTheDocument()
+    expect(screen.getByText('points')).toBeInTheDocument()
+  })
+
+  it('displays role badge in header', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    // Role badge has specific styling class
+    const badge = document.querySelector('.bg-gray-100.rounded-full')
+    expect(badge).toHaveTextContent('Kid')
+  })
+
+  it('displays Parent badge for parent role', async () => {
+    mockSupabaseData.profile = { ...mockProfile, role: 'parent' }
+
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    // Role badge has specific styling class
+    const badge = document.querySelector('.bg-gray-100.rounded-full')
+    expect(badge).toHaveTextContent('Parent')
+  })
+
+  it('opens avatar modal when avatar is clicked', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    // Find avatar button by the "Change" text inside it
+    const changeText = screen.getByText('Change')
+    const avatarButton = changeText.closest('button')!
+    await user.click(avatarButton)
+
+    expect(screen.getByText('Choose Avatar')).toBeInTheDocument()
+  })
+
+  it('renders form with Display Name and Nickname inputs', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Display Name')).toBeInTheDocument()
+    expect(screen.getByText('Nickname')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Test User')).toBeInTheDocument()
+  })
+
+  it('renders centered Save Changes button', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    const saveButton = screen.getByRole('button', { name: 'Save Changes' })
+    expect(saveButton).toBeInTheDocument()
+  })
+
+  it('renders Sign Out button', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: 'Sign Out' })).toBeInTheDocument()
+  })
+
+  it('displays nickname when available', async () => {
+    mockSupabaseData.profile = { ...mockProfile, nickname: 'Cool Kid' }
+
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Cool Kid')).toBeInTheDocument()
+    })
+  })
 })
