@@ -8,12 +8,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Modal } from '@/components/ui/modal'
+import { RoleSelector, type Role } from '@/components/ui/role-selector'
 import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
 
 export default function MePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [nickname, setNickname] = useState('')
+  const [role, setRole] = useState<Role>('child')
+  const [parentCount, setParentCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
@@ -37,6 +40,17 @@ export default function MePage() {
       setProfile(data)
       setDisplayName(data.display_name)
       setNickname(data.nickname || '')
+      setRole(data.role)
+
+      // Fetch parent count if user has a family
+      if (data.family_id) {
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('family_id', data.family_id)
+          .eq('role', 'parent')
+        setParentCount(count || 0)
+      }
     }
     setLoading(false)
   }, [supabase])
@@ -56,6 +70,7 @@ export default function MePage() {
       .update({
         display_name: displayName,
         nickname: nickname || null,
+        role,
       })
       .eq('id', profile.id)
 
@@ -136,7 +151,7 @@ export default function MePage() {
         <CardContent className="p-4">
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-base font-medium text-gray-700 mb-1">
                 Display Name
               </label>
               <input
@@ -149,7 +164,7 @@ export default function MePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-base font-medium text-gray-700 mb-1">
                 Nickname
               </label>
               <input
@@ -162,6 +177,24 @@ export default function MePage() {
               <p className="text-xs text-gray-500 mt-1">
                 A fun name to display on tasks
               </p>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-4">
+                <label className="text-base font-medium text-gray-700">
+                  Role
+                </label>
+                <RoleSelector
+                  selected={role}
+                  onChange={setRole}
+                  disabled={profile.role === 'parent' && parentCount <= 1}
+                />
+              </div>
+              {profile.role === 'parent' && parentCount <= 1 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  You are the only parent in this family and cannot change your role.
+                </p>
+              )}
             </div>
 
             <Button type="submit" disabled={saving} className="w-full">

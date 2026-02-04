@@ -28,11 +28,14 @@ describe('Signup Page', () => {
     jest.clearAllMocks()
   })
 
-  it('renders signup form', () => {
+  it('renders signup form with role selector', () => {
     render(<SignupPage />)
 
     expect(screen.getByRole('heading', { name: /chore champions/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument()
+    expect(screen.getByText('I am a...')).toBeInTheDocument()
+    expect(screen.getByText('Parent')).toBeInTheDocument()
+    expect(screen.getByText('Kid')).toBeInTheDocument()
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
@@ -105,7 +108,7 @@ describe('Signup Page', () => {
     expect(await screen.findByText(/facebook signup failed/i)).toBeInTheDocument()
   })
 
-  it('calls signUp on form submit', async () => {
+  it('calls signUp with default child role on form submit', async () => {
     mockSignUp.mockResolvedValue({ error: null })
     render(<SignupPage />)
 
@@ -120,6 +123,29 @@ describe('Signup Page', () => {
       options: {
         data: {
           display_name: 'Test User',
+          role: 'child',
+        },
+      },
+    })
+  })
+
+  it('calls signUp with parent role when selected', async () => {
+    mockSignUp.mockResolvedValue({ error: null })
+    render(<SignupPage />)
+
+    await userEvent.type(screen.getByLabelText(/display name/i), 'Test Parent')
+    await userEvent.click(screen.getByText('Parent'))
+    await userEvent.type(screen.getByLabelText(/email/i), 'parent@example.com')
+    await userEvent.type(screen.getByLabelText(/password/i), 'password123')
+    await userEvent.click(screen.getByRole('button', { name: /create account/i }))
+
+    expect(mockSignUp).toHaveBeenCalledWith({
+      email: 'parent@example.com',
+      password: 'password123',
+      options: {
+        data: {
+          display_name: 'Test Parent',
+          role: 'parent',
         },
       },
     })
