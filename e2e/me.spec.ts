@@ -12,36 +12,63 @@ test.describe('Me Page', () => {
   test.describe('Authenticated', () => {
     test.skip(({ browserName }) => true, 'Requires authentication setup')
 
-    test('displays profile header with avatar, name, and points', async ({ page }) => {
+    test('displays page header with My Profile title', async ({ page }) => {
       await page.goto('/me')
 
-      // Header should have horizontal layout with avatar on left
-      await expect(page.locator('header')).toBeVisible()
-
-      // Avatar should be visible and clickable
-      const avatarButton = page.locator('header button').first()
-      await expect(avatarButton).toBeVisible()
-
-      // Name should be displayed
-      await expect(page.locator('header h1')).toBeVisible()
-
-      // Points should be displayed
-      await expect(page.getByText('points')).toBeVisible()
+      // Header should be visible with title
+      await expect(page.getByText('My Profile')).toBeVisible()
     })
 
-    test('displays profile form with two-column layout', async ({ page }) => {
+    test('displays avatar section with change photo caption', async ({ page }) => {
+      await page.goto('/me')
+
+      // Avatar button should be visible
+      const avatarButton = page.getByRole('button', { name: 'Change avatar' })
+      await expect(avatarButton).toBeVisible()
+
+      // Caption should be visible
+      await expect(page.getByText('Tap to change avatar')).toBeVisible()
+    })
+
+    test('avatar shows edit overlay on hover', async ({ page }) => {
+      await page.goto('/me')
+
+      const avatarButton = page.getByRole('button', { name: 'Change avatar' })
+
+      // Edit overlay should be hidden initially
+      const overlay = avatarButton.locator('span.opacity-0')
+      await expect(overlay).toBeVisible()
+
+      // Hover over avatar
+      await avatarButton.hover()
+
+      // Overlay should become visible (opacity changes via group-hover)
+      await expect(avatarButton.locator('span.group-hover\\:opacity-100')).toBeVisible()
+    })
+
+    test('displays section headers', async ({ page }) => {
+      await page.goto('/me')
+
+      // Section headers should be visible (CSS transforms to uppercase)
+      await expect(page.getByText('Personal Info')).toBeVisible()
+      await expect(page.getByText('Role')).toBeVisible()
+    })
+
+    test('displays form with underline inputs', async ({ page }) => {
       await page.goto('/me')
 
       // Form fields should be visible
       await expect(page.getByText('Display Name')).toBeVisible()
       await expect(page.getByText('Nickname')).toBeVisible()
-      await expect(page.getByText('Role')).toBeVisible()
 
       // Role selector buttons
       await expect(page.getByRole('button', { name: 'Parent' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Kid' })).toBeVisible()
+    })
 
-      // Save button should be centered
+    test('displays Save Changes button', async ({ page }) => {
+      await page.goto('/me')
+
       await expect(page.getByRole('button', { name: 'Save Changes' })).toBeVisible()
     })
 
@@ -49,7 +76,7 @@ test.describe('Me Page', () => {
       await page.goto('/me')
 
       // Click the avatar button
-      const avatarButton = page.locator('header button').first()
+      const avatarButton = page.getByRole('button', { name: 'Change avatar' })
       await avatarButton.click()
 
       // Modal should open
@@ -60,13 +87,19 @@ test.describe('Me Page', () => {
       await page.goto('/me')
 
       // Open modal
-      const avatarButton = page.locator('header button').first()
+      const avatarButton = page.getByRole('button', { name: 'Change avatar' })
       await avatarButton.click()
       await expect(page.getByText('Choose Avatar')).toBeVisible()
 
-      // Close modal (click outside or close button)
+      // Close modal (press Escape)
       await page.keyboard.press('Escape')
       await expect(page.getByText('Choose Avatar')).not.toBeVisible()
+    })
+
+    test('sign out button is visible', async ({ page }) => {
+      await page.goto('/me')
+
+      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible()
     })
 
     test('role selector is interactive', async ({ page }) => {
@@ -84,18 +117,30 @@ test.describe('Me Page', () => {
       await expect(kidButton).toHaveClass(/bg-purple-600/)
     })
 
-    test('sign out button is visible', async ({ page }) => {
+    test('underline inputs have animated focus effect', async ({ page }) => {
       await page.goto('/me')
 
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible()
+      // Focus on display name input
+      const displayNameInput = page.locator('input[id="display-name"]')
+
+      // Underline should start with width 0
+      const underline = page.locator('input[id="display-name"] + div')
+      await expect(underline).toHaveClass(/w-0/)
+
+      // Focus the input
+      await displayNameInput.focus()
+
+      // The animated underline should expand to full width
+      await expect(underline).toHaveClass(/w-full/)
+      await expect(underline).toHaveClass(/bg-purple-600/)
     })
 
-    test('displays role badge in header', async ({ page }) => {
+    test('page has mobile-first max-width container', async ({ page }) => {
       await page.goto('/me')
 
-      // Role badge should show either Parent or Kid
-      const badge = page.locator('.bg-gray-100.rounded-full')
-      await expect(badge).toBeVisible()
+      // Main content should have max-w-md class (448px)
+      const container = page.locator('main .max-w-md')
+      await expect(container).toBeVisible()
     })
   })
 })

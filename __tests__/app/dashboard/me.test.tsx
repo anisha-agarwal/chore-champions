@@ -88,11 +88,19 @@ describe('Me Page', () => {
     expect(document.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
+  it('renders page header with My Profile title', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+  })
+
   it('renders profile with role selector', async () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     expect(screen.getByText('Role')).toBeInTheDocument()
@@ -104,7 +112,7 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     const kidButton = screen.getByRole('button', { name: 'Kid' })
@@ -118,7 +126,7 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     expect(screen.getByText(/only parent/i)).toBeInTheDocument()
@@ -136,7 +144,7 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     expect(screen.queryByText(/only parent/i)).not.toBeInTheDocument()
@@ -149,7 +157,7 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     const kidButton = screen.getByRole('button', { name: 'Kid' })
@@ -164,41 +172,16 @@ describe('Me Page', () => {
     expect(parentButton).not.toBeDisabled()
   })
 
-  it('displays points in header', async () => {
+  it('renders section headers', async () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('100')).toBeInTheDocument()
-    expect(screen.getByText('points')).toBeInTheDocument()
-  })
-
-  it('displays role badge in header', async () => {
-    render(<MePage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
-    })
-
-    // Role badge has specific styling class
-    const badge = document.querySelector('.bg-gray-100.rounded-full')
-    expect(badge).toHaveTextContent('Kid')
-  })
-
-  it('displays Parent badge for parent role', async () => {
-    mockSupabaseData.profile = { ...mockProfile, role: 'parent' }
-
-    render(<MePage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
-    })
-
-    // Role badge has specific styling class
-    const badge = document.querySelector('.bg-gray-100.rounded-full')
-    expect(badge).toHaveTextContent('Parent')
+    // Section headers have uppercase CSS class but DOM text is title case
+    expect(screen.getByText('Personal Info')).toBeInTheDocument()
+    expect(screen.getByText('Role')).toBeInTheDocument()
   })
 
   it('opens avatar modal when avatar is clicked', async () => {
@@ -206,12 +189,11 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
-    // Find avatar button by the "Change" text inside it
-    const changeText = screen.getByText('Change')
-    const avatarButton = changeText.closest('button')!
+    // Find avatar button by aria-label
+    const avatarButton = screen.getByRole('button', { name: 'Change avatar' })
     await user.click(avatarButton)
 
     expect(screen.getByText('Choose Avatar')).toBeInTheDocument()
@@ -221,7 +203,7 @@ describe('Me Page', () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     expect(screen.getByText('Display Name')).toBeInTheDocument()
@@ -229,34 +211,33 @@ describe('Me Page', () => {
     expect(screen.getByDisplayValue('Test User')).toBeInTheDocument()
   })
 
-  it('renders centered Save Changes button', async () => {
+  it('renders Save Changes button', async () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
-    const saveButton = screen.getByRole('button', { name: 'Save Changes' })
-    expect(saveButton).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument()
   })
 
   it('renders Sign Out button', async () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
 
     expect(screen.getByRole('button', { name: 'Sign Out' })).toBeInTheDocument()
   })
 
-  it('displays nickname when available', async () => {
-    mockSupabaseData.profile = { ...mockProfile, nickname: 'Cool Kid' }
-
+  it('displays "Tap to change avatar" caption under avatar', async () => {
     render(<MePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Cool Kid')).toBeInTheDocument()
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
     })
+
+    expect(screen.getByText('Tap to change avatar')).toBeInTheDocument()
   })
 })

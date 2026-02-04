@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Modal } from '@/components/ui/modal'
 import { RoleSelector, type Role } from '@/components/ui/role-selector'
+import { UnderlineInput } from '@/components/ui/underline-input'
+import { Button } from '@/components/ui/button'
 import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
 
 export default function MePage() {
@@ -19,6 +19,7 @@ export default function MePage() {
   const [parentCount, setParentCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -59,8 +60,7 @@ export default function MePage() {
     fetchProfile()
   }, [fetchProfile])
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSave() {
     if (!profile) return
 
     setSaving(true)
@@ -75,9 +75,18 @@ export default function MePage() {
       .eq('id', profile.id)
 
     if (!error) {
+      setSaving(false)
+      setSaveSuccess(true)
+
+      // Reset success state after 1.5s
+      setTimeout(() => {
+        setSaveSuccess(false)
+      }, 1500)
+
       fetchProfile()
+    } else {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function handleAvatarSelect(avatarUrl: string) {
@@ -117,114 +126,116 @@ export default function MePage() {
   }
 
   return (
-    <div className="p-4 space-y-6 max-w-2xl mx-auto">
-      {/* Horizontal Header */}
-      <header className="flex items-center gap-6">
-        {/* Avatar on left */}
-        <button
-          onClick={() => setIsAvatarOpen(true)}
-          className="relative flex-shrink-0 group"
-        >
-          <Avatar
-            src={profile.avatar_url}
-            fallback={profile.nickname || profile.display_name}
-            size="xl"
-            className="w-48 h-48"
-          />
-          <span className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-white text-xs font-medium">Change</span>
-          </span>
-        </button>
-
-        {/* Name and info in middle */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {profile.nickname || profile.display_name}
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-lg font-semibold text-purple-600">{profile.points}</span>
-            <span className="text-gray-500">points</span>
-          </div>
-          <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm mt-2">
-            {profile.role === 'parent' ? 'Parent' : 'Kid'}
-          </span>
-        </div>
-
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Page title */}
+      <header className="px-6 pt-6 pb-2">
+        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
       </header>
 
-      {/* Two-column form */}
-      <Card>
-        <CardContent className="p-6">
-          <form id="profile-form" onSubmit={handleSave} className="space-y-5">
-            {/* Display Name row */}
-            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-              <label className="text-sm font-medium text-gray-500 text-right">
-                Display Name
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+      <main className="flex-1 px-6 pt-4 pb-32">
+        <div className="max-w-md mx-auto">
+          {/* Avatar Section */}
+          <section className="flex flex-col items-center mb-10">
+            <button
+              onClick={() => setIsAvatarOpen(true)}
+              className="relative group"
+              aria-label="Change avatar"
+            >
+              <Avatar
+                src={profile.avatar_url}
+                fallback={profile.nickname || profile.display_name}
+                size="2xl"
               />
-            </div>
+              {/* Edit icon overlay - centered, visible on hover */}
+              <span className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="white"
+                  className="w-8 h-8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+                  />
+                </svg>
+              </span>
+            </button>
+            <p className="text-sm text-gray-400 mt-3">Tap to change avatar</p>
+          </section>
 
-            {/* Nickname row */}
-            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-              <label className="text-sm font-medium text-gray-500 text-right pt-2">
-                Nickname
-              </label>
-              <div>
-                <input
-                  type="text"
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+            {/* Personal Info Section */}
+            <section className="mb-8">
+              <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
+                Personal Info
+              </h2>
+              <div className="space-y-6">
+                <UnderlineInput
+                  label="Display Name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                />
+                <UnderlineInput
+                  label="Nickname"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="e.g., Baby Bison, Panther"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                  helperText="A fun name to display on tasks"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  A fun name to display on tasks
-                </p>
               </div>
-            </div>
+            </section>
 
-            {/* Role row */}
-            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-              <label className="text-sm font-medium text-gray-500 text-right pt-2">
+            {/* Role Section */}
+            <section className="mb-8">
+              <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
                 Role
-              </label>
-              <div>
-                <RoleSelector
-                  selected={role}
-                  onChange={setRole}
-                  disabled={profile.role === 'parent' && parentCount <= 1}
-                />
-                {profile.role === 'parent' && parentCount <= 1 && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    You are the only parent in this family and cannot change your role.
-                  </p>
-                )}
-              </div>
-            </div>
+              </h2>
+              <RoleSelector
+                selected={role}
+                onChange={setRole}
+                disabled={profile.role === 'parent' && parentCount <= 1}
+              />
+              {profile.role === 'parent' && parentCount <= 1 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  You are the only parent in this family and cannot change your role.
+                </p>
+              )}
+            </section>
 
-            {/* Save button */}
-            <div className="flex justify-center pt-2">
-              <Button type="submit" disabled={saving} className="px-8">
-                {saving ? 'Saving...' : 'Save Changes'}
+            {/* Sign Out */}
+            <section className="mt-8">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSignOut}
+                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 justify-start px-0"
+              >
+                Sign Out
               </Button>
-            </div>
+            </section>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
 
-      <Button
-        variant="ghost"
-        onClick={handleSignOut}
-        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-      >
-        Sign Out
-      </Button>
+      {/* Save button footer */}
+      <footer className="px-6 pb-6">
+        <div className="max-w-md mx-auto">
+          <Button
+            type="button"
+            onClick={handleSave}
+            loading={saving}
+            success={saveSuccess}
+            className="w-full h-12"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </footer>
 
       {/* Avatar Selection Modal */}
       <Modal

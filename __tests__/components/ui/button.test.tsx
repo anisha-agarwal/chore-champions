@@ -52,4 +52,35 @@ describe('Button', () => {
     rerender(<Button size="lg">Large</Button>)
     expect(screen.getByRole('button')).toHaveClass('px-6')
   })
+
+  it('shows loading state with spinner', () => {
+    render(<Button loading>Save</Button>)
+
+    const button = screen.getByRole('button')
+    expect(button).toBeDisabled()
+    expect(screen.getByText('Saving...')).toBeInTheDocument()
+    expect(button.querySelector('.animate-spin')).toBeInTheDocument()
+  })
+
+  it('shows success state with checkmark', () => {
+    render(<Button success>Save</Button>)
+
+    const button = screen.getByRole('button')
+    expect(screen.getByText('Saved')).toBeInTheDocument()
+  })
+
+  it('loading state takes precedence over success', () => {
+    render(<Button loading success>Save</Button>)
+
+    expect(screen.getByText('Saving...')).toBeInTheDocument()
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
+  })
+
+  it('is disabled when loading', async () => {
+    const handleClick = jest.fn()
+    render(<Button loading onClick={handleClick}>Save</Button>)
+
+    await userEvent.click(screen.getByRole('button'))
+    expect(handleClick).not.toHaveBeenCalled()
+  })
 })
