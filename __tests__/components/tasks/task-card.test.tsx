@@ -26,40 +26,40 @@ const mockTask: TaskWithAssignee = {
 
 describe('TaskCard', () => {
   it('renders task title', () => {
-    render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.getByText('Clean your room')).toBeInTheDocument()
   })
 
   it('renders task description', () => {
-    render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.getByText('Make bed and pick up toys')).toBeInTheDocument()
   })
 
   it('renders points', () => {
-    render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.getByText('10 pts')).toBeInTheDocument()
   })
 
   it('renders time of day badge', () => {
-    render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.getByText('Morning')).toBeInTheDocument()
   })
 
   it('renders recurring badge when task is recurring', () => {
     const recurringTask = { ...mockTask, recurring: 'daily' as const }
-    render(<TaskCard task={recurringTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={recurringTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.getByText('Daily')).toBeInTheDocument()
   })
 
   it('does not render recurring badge for one-time tasks', () => {
-    render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
     expect(screen.queryByText('Daily')).not.toBeInTheDocument()
     expect(screen.queryByText('Weekly')).not.toBeInTheDocument()
   })
 
-  it('calls onComplete when checkbox clicked', async () => {
+  it('calls onComplete when checkbox clicked on incomplete task', async () => {
     const handleComplete = jest.fn()
-    render(<TaskCard task={mockTask} onComplete={handleComplete} onEdit={jest.fn()} />)
+    render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
     const buttons = screen.getAllByRole('button')
     // First button is the complete checkbox
@@ -70,26 +70,43 @@ describe('TaskCard', () => {
 
   it('shows completed state', () => {
     const completedTask = { ...mockTask, completed: true }
-    render(<TaskCard task={completedTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
     expect(screen.getByText('Clean your room')).toHaveClass('line-through')
   })
 
-  it('disables checkbox when already completed', async () => {
+  it('calls onUncomplete when clicking completed checkbox', async () => {
     const completedTask = { ...mockTask, completed: true }
     const handleComplete = jest.fn()
-    render(<TaskCard task={completedTask} onComplete={handleComplete} onEdit={jest.fn()} />)
+    const handleUncomplete = jest.fn()
+    render(<TaskCard task={completedTask} onComplete={handleComplete} onUncomplete={handleUncomplete} onEdit={jest.fn()} />)
 
     // When completed, only the checkbox button is visible (edit button is hidden)
     const checkbox = screen.getByRole('button')
     await userEvent.click(checkbox)
 
     expect(handleComplete).not.toHaveBeenCalled()
+    expect(handleUncomplete).toHaveBeenCalledWith('task-1')
+  })
+
+  it('shows "Click to undo" title on completed checkbox', () => {
+    const completedTask = { ...mockTask, completed: true }
+    render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
+
+    const checkbox = screen.getByRole('button')
+    expect(checkbox).toHaveAttribute('title', 'Click to undo')
+  })
+
+  it('does not show undo title on incomplete checkbox', () => {
+    render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons[0]).not.toHaveAttribute('title')
   })
 
   describe('Edit Button', () => {
     it('renders edit button for incomplete tasks', () => {
-      render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+      render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
       const editButton = screen.getByTitle('Edit quest')
       expect(editButton).toBeInTheDocument()
@@ -97,7 +114,7 @@ describe('TaskCard', () => {
 
     it('calls onEdit with task when edit button is clicked', async () => {
       const handleEdit = jest.fn()
-      render(<TaskCard task={mockTask} onComplete={jest.fn()} onEdit={handleEdit} />)
+      render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={handleEdit} />)
 
       const editButton = screen.getByTitle('Edit quest')
       await userEvent.click(editButton)
@@ -107,15 +124,35 @@ describe('TaskCard', () => {
 
     it('hides edit button when task is completed', () => {
       const completedTask = { ...mockTask, completed: true }
-      render(<TaskCard task={completedTask} onComplete={jest.fn()} onEdit={jest.fn()} />)
+      render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
       expect(screen.queryByTitle('Edit quest')).not.toBeInTheDocument()
+    })
+
+    it('shows edit button again after uncompleting', async () => {
+      const completedTask = { ...mockTask, completed: true }
+      const handleUncomplete = jest.fn()
+      const { rerender } = render(
+        <TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={handleUncomplete} onEdit={jest.fn()} />
+      )
+
+      // Initially, edit button is hidden
+      expect(screen.queryByTitle('Edit quest')).not.toBeInTheDocument()
+
+      // Simulate uncomplete - update the task prop
+      const uncompletedTask = { ...mockTask, completed: false }
+      rerender(
+        <TaskCard task={uncompletedTask} onComplete={jest.fn()} onUncomplete={handleUncomplete} onEdit={jest.fn()} />
+      )
+
+      // Edit button should reappear
+      expect(screen.getByTitle('Edit quest')).toBeInTheDocument()
     })
 
     it('does not call onComplete when edit button is clicked', async () => {
       const handleComplete = jest.fn()
       const handleEdit = jest.fn()
-      render(<TaskCard task={mockTask} onComplete={handleComplete} onEdit={handleEdit} />)
+      render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={handleEdit} />)
 
       const editButton = screen.getByTitle('Edit quest')
       await userEvent.click(editButton)

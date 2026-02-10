@@ -202,6 +202,42 @@ export default function QuestsPage() {
     fetchData()
   }
 
+  async function handleUncompleteTask(taskId: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task) throw new Error('Task not found')
+
+    // For non-recurring tasks, mark as not completed on the task row
+    if (!task.recurring) {
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({ completed: false })
+        .eq('id', taskId)
+
+      if (updateError) throw updateError
+    }
+
+    // Delete completion record
+    // For recurring tasks, match by completion_date; for non-recurring, just match task_id
+    let deleteQuery = supabase
+      .from('task_completions')
+      .delete()
+      .eq('task_id', taskId)
+
+    if (task.recurring) {
+      deleteQuery = deleteQuery.eq('completion_date', toDateString(selectedDate))
+    }
+
+    const { error: deleteError } = await deleteQuery
+
+    if (deleteError) throw deleteError
+
+    // Database trigger handles point deduction
+    fetchData()
+  }
+
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
     // Filter by member
@@ -271,6 +307,7 @@ export default function QuestsPage() {
       <TaskList
         tasks={filteredTasks}
         onComplete={handleCompleteTask}
+        onUncomplete={handleUncompleteTask}
         onEdit={handleEditTask}
         emptyMessage="No quests for this day. Add one!"
         dateKey={toDateString(selectedDate)}

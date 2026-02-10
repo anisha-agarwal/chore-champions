@@ -37,14 +37,14 @@ const mockTasks: TaskWithAssignee[] = [
 
 describe('TaskList', () => {
   it('renders all tasks', () => {
-    render(<TaskList tasks={mockTasks} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskList tasks={mockTasks} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
     expect(screen.getByText('Clean room')).toBeInTheDocument()
     expect(screen.getByText('Do homework')).toBeInTheDocument()
   })
 
   it('shows empty message when no tasks', () => {
-    render(<TaskList tasks={[]} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskList tasks={[]} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
     expect(screen.getByText('No quests found')).toBeInTheDocument()
   })
@@ -54,6 +54,7 @@ describe('TaskList', () => {
       <TaskList
         tasks={[]}
         onComplete={jest.fn()}
+        onUncomplete={jest.fn()}
         onEdit={jest.fn()}
         emptyMessage="No tasks for today!"
       />
@@ -63,7 +64,7 @@ describe('TaskList', () => {
   })
 
   it('renders correct number of task cards', () => {
-    render(<TaskList tasks={mockTasks} onComplete={jest.fn()} onEdit={jest.fn()} />)
+    render(<TaskList tasks={mockTasks} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} />)
 
     // Each task has 2 buttons (complete checkbox and edit button)
     const taskTitles = screen.getAllByRole('button')

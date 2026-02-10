@@ -55,7 +55,16 @@ lib/
 
 ## Git Workflow
 
+- **Always start from updated main:** `git checkout main && git pull` before creating a new branch
 - Each bug/feature gets its own branch linked to the GitHub issue (e.g., `fix/issue-10-invite-code`, `feature/issue-5-delete-task`)
 - Never commit directly to main
 - Open a PR for review, reference the issue number
 - Only merge after CI passes
+
+## Architecture Decision Records
+
+- ADRs document design decisions for features
+- Located in `docs/adr/`
+- Each feature should have its own ADR with Mermaid diagram
+- Use `docs/adr/000-template.md` as starting point
+- Reference the GitHub issue number in each ADR
