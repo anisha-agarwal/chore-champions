@@ -48,6 +48,13 @@ lib/
 - Run single test: `npm test -- task-card`
 - Add/update tests with every bug fix and new feature (unit and e2e as needed)
 
+### E2E Testing (Playwright)
+
+- Auth setup in `e2e/auth.setup.ts` saves sessions to `.auth/`
+- Parent tests use `.auth/parent.json` storage state
+- Child tests use `.auth/child.json` storage state
+- Add test credentials to `.env.local` (see `.env.example`)
+
 ## Database
 
 - Supabase tables: `profiles`, `families`, `tasks`, `task_completions`, `rewards`

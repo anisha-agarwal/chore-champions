@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import dotenv from 'dotenv'
+import path from 'path'
+
+// Load env vars from .env.local
+dotenv.config({ path: path.resolve(__dirname, '.env.local') })
 
 export default defineConfig({
   testDir: './e2e',
@@ -12,9 +17,32 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
+    // Setup projects - run first to authenticate
     {
-      name: 'chromium',
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    // Tests that don't require auth
+    {
+      name: 'unauthenticated',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /landing\.spec\.ts|navigation\.spec\.ts/,
+    },
+    // Tests that require parent auth
+    {
+      name: 'parent',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/parent.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /quests\.spec\.ts|me\.spec\.ts/,
+    },
+    // Auth page tests (login, signup, join) - no auth needed
+    {
+      name: 'auth-pages',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /auth\.spec\.ts/,
     },
   ],
   webServer: {
