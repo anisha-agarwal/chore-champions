@@ -60,6 +60,7 @@ lib/
 - Never commit directly to main
 - Open a PR for review, reference the issue number
 - Only merge after CI passes
+- **After merge:** Return to main and pull: `git checkout main && git pull`
 
 ## Architecture Decision Records
 
