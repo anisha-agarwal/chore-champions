@@ -8,11 +8,13 @@ import type { TaskWithAssignee } from '@/lib/types'
 interface TaskCardProps {
   task: TaskWithAssignee
   onComplete: (taskId: string) => Promise<void>
+  onUncomplete: (taskId: string) => Promise<void>
   onEdit: (task: TaskWithAssignee) => void
 }
 
-export function TaskCard({ task, onComplete, onEdit }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onUncomplete, onEdit }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
+  const [isUncompleting, setIsUncompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
 
   // Sync with prop when task data changes (e.g., navigating between days)
@@ -34,6 +36,28 @@ export function TaskCard({ task, onComplete, onEdit }: TaskCardProps) {
     }
   }
 
+  async function handleUncomplete() {
+    if (!isCompleted || isUncompleting) return
+
+    setIsUncompleting(true)
+    try {
+      await onUncomplete(task.id)
+      setIsCompleted(false)
+    } catch (error) {
+      console.error('Failed to uncomplete task:', error)
+    } finally {
+      setIsUncompleting(false)
+    }
+  }
+
+  function handleCheckboxClick() {
+    if (isCompleted) {
+      handleUncomplete()
+    } else {
+      handleComplete()
+    }
+  }
+
   const timeLabels: Record<string, { label: string; color: string }> = {
     morning: { label: 'Morning', color: 'bg-amber-100 text-amber-700' },
     afternoon: { label: 'Afternoon', color: 'bg-blue-100 text-blue-700' },
@@ -52,21 +76,22 @@ export function TaskCard({ task, onComplete, onEdit }: TaskCardProps) {
     >
       <div className="flex items-start gap-3">
         <button
-          onClick={handleComplete}
-          disabled={isCompleted || isCompleting}
+          onClick={handleCheckboxClick}
+          disabled={isCompleting || isUncompleting}
+          title={isCompleted ? 'Click to undo' : undefined}
           className={cn(
             'mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
             isCompleted
-              ? 'bg-green-500 border-green-500'
+              ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600 cursor-pointer'
               : 'border-gray-300 hover:border-purple-500'
           )}
         >
-          {isCompleted && (
+          {isCompleted && !isUncompleting && (
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           )}
-          {isCompleting && (
+          {(isCompleting || isUncompleting) && (
             <svg className="w-4 h-4 text-purple-500 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />

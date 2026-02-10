@@ -6,12 +6,13 @@ import type { TaskWithAssignee } from '@/lib/types'
 interface TaskListProps {
   tasks: TaskWithAssignee[]
   onComplete: (taskId: string) => Promise<void>
+  onUncomplete: (taskId: string) => Promise<void>
   onEdit: (task: TaskWithAssignee) => void
   emptyMessage?: string
   dateKey?: string
 }
 
-export function TaskList({ tasks, onComplete, onEdit, emptyMessage = 'No quests found', dateKey }: TaskListProps) {
+export function TaskList({ tasks, onComplete, onUncomplete, onEdit, emptyMessage = 'No quests found', dateKey }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <div className="text-center py-12">
@@ -28,7 +29,7 @@ export function TaskList({ tasks, onComplete, onEdit, emptyMessage = 'No quests 
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <TaskCard key={`${task.id}-${dateKey || ''}`} task={task} onComplete={onComplete} onEdit={onEdit} />
+        <TaskCard key={`${task.id}-${dateKey || ''}`} task={task} onComplete={onComplete} onUncomplete={onUncomplete} onEdit={onEdit} />
       ))}
     </div>
   )
