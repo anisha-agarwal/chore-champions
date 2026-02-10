@@ -1,75 +1,111 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Quests Page', () => {
-  // These tests require authentication which we skip in CI
-  // They verify the complete/undo flow works correctly
-
-  test.skip('complete and undo task flow', async ({ page }) => {
-    // This test requires a logged-in user with a family and tasks
-    // In a real test environment, we would:
-    // 1. Log in as a test user
-    // 2. Navigate to quests page
-    // 3. Find an incomplete task
-    // 4. Click the checkbox to complete it
-    // 5. Verify checkmark appears green
-    // 6. Click the checkmark again to undo
-    // 7. Verify task returns to incomplete state
-    // 8. Verify points decreased
-
+  test.beforeEach(async ({ page }) => {
     await page.goto('/quests')
+  })
 
-    // Find a task checkbox (incomplete)
-    const checkbox = page.locator('button').filter({ hasText: '' }).first()
+  test('displays quests page header', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Quests' })).toBeVisible()
+  })
+
+  test('displays week picker', async ({ page }) => {
+    // Week picker should be visible with day buttons
+    await expect(page.getByRole('button', { name: /sun|mon|tue|wed|thu|fri|sat/i }).first()).toBeVisible()
+  })
+
+  test('displays member filter or time filter', async ({ page }) => {
+    // Check page loads successfully
+    await expect(page.getByRole('heading', { name: 'Quests' })).toBeVisible()
+    // Page should have filter buttons
+    await expect(page.locator('button').first()).toBeVisible()
+  })
+
+  test('displays FAB button to add quest', async ({ page }) => {
+    // FAB button with + icon
+    const fab = page.locator('button.fixed').filter({ hasText: '' })
+    await expect(fab).toBeVisible()
+  })
+
+  test('complete and undo task flow', async ({ page }) => {
+    // Find an incomplete task checkbox (not green)
+    const incompleteCheckbox = page.locator('button.border-gray-300').first()
+
+    // Skip if no incomplete tasks
+    if (await incompleteCheckbox.count() === 0) {
+      test.skip()
+      return
+    }
 
     // Complete the task
-    await checkbox.click()
+    await incompleteCheckbox.click()
 
-    // Verify completed state (green checkmark)
-    await expect(checkbox).toHaveClass(/bg-green-500/)
+    // Wait for completion - checkbox should turn green
+    await expect(incompleteCheckbox).toHaveClass(/bg-green-500/, { timeout: 5000 })
 
     // Hover should show "Click to undo" title
-    await expect(checkbox).toHaveAttribute('title', 'Click to undo')
+    await expect(incompleteCheckbox).toHaveAttribute('title', 'Click to undo')
 
     // Undo the completion
-    await checkbox.click()
+    await incompleteCheckbox.click()
 
     // Verify returned to incomplete state
-    await expect(checkbox).not.toHaveClass(/bg-green-500/)
+    await expect(incompleteCheckbox).not.toHaveClass(/bg-green-500/, { timeout: 5000 })
   })
 
-  test.skip('parent can undo child completion', async ({ page }) => {
-    // This test requires:
-    // 1. A parent user logged in
-    // 2. A task completed by a child in the same family
-    // 3. Verifying parent can click to undo
-
-    await page.goto('/quests')
-
-    // Find a completed task (by a child)
+  test('completed task shows strikethrough text', async ({ page }) => {
+    // Find any completed task
     const completedCheckbox = page.locator('button.bg-green-500').first()
 
-    // Parent should be able to click to undo
-    await completedCheckbox.click()
+    if (await completedCheckbox.count() === 0) {
+      test.skip()
+      return
+    }
 
-    // Task should return to incomplete
-    await expect(completedCheckbox).not.toHaveClass(/bg-green-500/)
+    // The task title should have line-through
+    const taskCard = completedCheckbox.locator('..').locator('..')
+    await expect(taskCard.locator('h3')).toHaveClass(/line-through/)
   })
 
-  test.skip('kid cannot undo parent completion', async ({ page }) => {
-    // This test requires:
-    // 1. A child user logged in
-    // 2. A task completed by a parent in the same family
-    // 3. Verifying child cannot undo (RLS policy blocks delete)
+  test('edit button hidden on completed tasks', async ({ page }) => {
+    // Find a completed task
+    const completedCheckbox = page.locator('button.bg-green-500').first()
 
-    await page.goto('/quests')
+    if (await completedCheckbox.count() === 0) {
+      test.skip()
+      return
+    }
 
-    // Find a completed task by parent
-    const parentCompletedCheckbox = page.locator('button.bg-green-500').first()
+    // Edit button should not be visible for completed tasks
+    const taskCard = completedCheckbox.locator('..').locator('..')
+    await expect(taskCard.getByTitle('Edit quest')).not.toBeVisible()
+  })
 
-    // Child clicks to try to undo
-    await parentCompletedCheckbox.click()
+  test('edit button visible on incomplete tasks', async ({ page }) => {
+    // Find an incomplete task
+    const incompleteCheckbox = page.locator('button.border-gray-300').first()
 
-    // Task should still be completed (undo failed silently or with error)
-    // The exact behavior depends on how the app handles RLS errors
+    if (await incompleteCheckbox.count() === 0) {
+      test.skip()
+      return
+    }
+
+    // Edit button should be visible
+    const taskCard = incompleteCheckbox.locator('..').locator('..')
+    await expect(taskCard.getByTitle('Edit quest')).toBeVisible()
+  })
+
+  test('can open task form via FAB', async ({ page }) => {
+    // Click FAB button
+    const fab = page.locator('button.fixed.bg-purple-600')
+    await fab.click()
+
+    // Task form modal should open - look for the heading specifically
+    await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+  })
+
+  test('points display in header', async ({ page }) => {
+    // Header should show points
+    await expect(page.getByText(/points/i)).toBeVisible()
   })
 })
