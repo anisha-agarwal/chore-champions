@@ -69,3 +69,12 @@ lib/
 - Each feature should have its own ADR with Mermaid diagram
 - Use `docs/adr/000-template.md` as starting point
 - Reference the GitHub issue number in each ADR
+- **Before implementing new features:** Review existing ADRs for patterns and consistency
+
+### Existing ADRs
+
+**Update this table when adding new ADRs.**
+
+| ADR | Feature | Key Decisions |
+|-----|---------|---------------|
+| [001-undo-task](docs/adr/001-undo-task.md) | Undo task completion | RLS policy for permissions, DB trigger for points, clickable checkmark UI |
