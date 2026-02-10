@@ -1,4 +1,29 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
+
+// Helper to create a test task via UI
+async function createTestTask(page: Page, taskName: string) {
+  // Click FAB button to open form
+  const fab = page.locator('button.fixed.bg-purple-600')
+  await fab.click()
+
+  // Wait for modal to open
+  await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+
+  // Fill in task name (using placeholder since label isn't associated)
+  await page.getByPlaceholder(/clean your room/i).fill(taskName)
+
+  // Submit the form
+  await page.getByRole('button', { name: /create quest/i }).click()
+
+  // Wait for modal to close and task to appear
+  await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
+  await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
+}
+
+// Helper to find and return a task card by name
+function getTaskCard(page: Page, taskName: string) {
+  return page.locator('.bg-white.rounded-xl').filter({ hasText: taskName })
+}
 
 test.describe('Quests Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,70 +53,86 @@ test.describe('Quests Page', () => {
   })
 
   test('complete and undo task flow', async ({ page }) => {
-    // Find an incomplete task checkbox (not green)
-    const incompleteCheckbox = page.locator('button.border-gray-300').first()
+    const taskName = `Test Complete Undo ${Date.now()}`
 
-    // Skip if no incomplete tasks
-    if (await incompleteCheckbox.count() === 0) {
-      test.skip()
-      return
-    }
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the checkbox for our new task (should be incomplete)
+    const taskCard = getTaskCard(page, taskName)
+    const checkbox = taskCard.locator('button.border-gray-300')
 
     // Complete the task
-    await incompleteCheckbox.click()
+    await checkbox.click()
 
     // Wait for completion - checkbox should turn green
-    await expect(incompleteCheckbox).toHaveClass(/bg-green-500/, { timeout: 5000 })
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
 
     // Hover should show "Click to undo" title
-    await expect(incompleteCheckbox).toHaveAttribute('title', 'Click to undo')
+    const completedCheckbox = taskCard.locator('button.bg-green-500')
+    await expect(completedCheckbox).toHaveAttribute('title', 'Click to undo')
 
     // Undo the completion
-    await incompleteCheckbox.click()
+    await completedCheckbox.click()
 
     // Verify returned to incomplete state
-    await expect(incompleteCheckbox).not.toHaveClass(/bg-green-500/, { timeout: 5000 })
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
   })
 
   test('completed task shows strikethrough text', async ({ page }) => {
-    // Find any completed task
-    const completedCheckbox = page.locator('button.bg-green-500').first()
+    const taskName = `Test Strikethrough ${Date.now()}`
 
-    if (await completedCheckbox.count() === 0) {
-      test.skip()
-      return
-    }
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find and complete the task
+    const taskCard = getTaskCard(page, taskName)
+    const checkbox = taskCard.locator('button.border-gray-300')
+    await checkbox.click()
+
+    // Wait for completion
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
 
     // The task title should have line-through
-    const taskCard = completedCheckbox.locator('..').locator('..')
     await expect(taskCard.locator('h3')).toHaveClass(/line-through/)
+
+    // Cleanup: undo completion
+    await taskCard.locator('button.bg-green-500').click()
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
   })
 
   test('edit button hidden on completed tasks', async ({ page }) => {
-    // Find a completed task
-    const completedCheckbox = page.locator('button.bg-green-500').first()
+    const taskName = `Test Edit Hidden ${Date.now()}`
 
-    if (await completedCheckbox.count() === 0) {
-      test.skip()
-      return
-    }
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find and complete the task
+    const taskCard = getTaskCard(page, taskName)
+    const checkbox = taskCard.locator('button.border-gray-300')
+    await checkbox.click()
+
+    // Wait for completion
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
 
     // Edit button should not be visible for completed tasks
-    const taskCard = completedCheckbox.locator('..').locator('..')
     await expect(taskCard.getByTitle('Edit quest')).not.toBeVisible()
+
+    // Cleanup: undo completion
+    await taskCard.locator('button.bg-green-500').click()
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
   })
 
   test('edit button visible on incomplete tasks', async ({ page }) => {
-    // Find an incomplete task
-    const incompleteCheckbox = page.locator('button.border-gray-300').first()
+    const taskName = `Test Edit Visible ${Date.now()}`
 
-    if (await incompleteCheckbox.count() === 0) {
-      test.skip()
-      return
-    }
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
 
     // Edit button should be visible
-    const taskCard = incompleteCheckbox.locator('..').locator('..')
     await expect(taskCard.getByTitle('Edit quest')).toBeVisible()
   })
 
