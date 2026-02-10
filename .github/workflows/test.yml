@@ -46,8 +46,12 @@ jobs:
       - name: Run E2E tests
         run: npm run test:e2e
         env:
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_PARENT_EMAIL: ${{ secrets.TEST_PARENT_EMAIL }}
+          TEST_PARENT_PASSWORD: ${{ secrets.TEST_PARENT_PASSWORD }}
+          TEST_CHILD_EMAIL: ${{ secrets.TEST_CHILD_EMAIL }}
+          TEST_CHILD_PASSWORD: ${{ secrets.TEST_CHILD_PASSWORD }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
