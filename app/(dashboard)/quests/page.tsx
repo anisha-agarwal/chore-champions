@@ -7,6 +7,8 @@ import { TimeFilter } from '@/components/tasks/time-filter'
 import { TaskList } from '@/components/tasks/task-list'
 import { TaskForm } from '@/components/tasks/task-form'
 import { MemberFilter } from '@/components/family/member-filter'
+import { Modal } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
 import { toDateString } from '@/lib/utils'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
 
@@ -19,6 +21,8 @@ export default function QuestsPage() {
   const [selectedTime, setSelectedTime] = useState('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<TaskWithAssignee | null>(null)
+  const [taskToDelete, setTaskToDelete] = useState<TaskWithAssignee | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
@@ -66,6 +70,7 @@ export default function QuestsPage() {
         .order('created_at', { ascending: true })
 
       // 2. Fetch recurring tasks that started on or before this date
+      // and have no end_date or end_date >= selected date
       const { data: recurringTasks } = await supabase
         .from('tasks')
         .select('*, profiles!tasks_assigned_to_fkey(id, display_name, avatar_url, nickname)')
@@ -74,8 +79,11 @@ export default function QuestsPage() {
         .not('recurring', 'is', null)
         .order('created_at', { ascending: true })
 
-      // 3. Filter weekly recurring tasks by day of week
+      // 3. Filter recurring tasks by day of week and end_date
       const filteredRecurring = (recurringTasks || []).filter((task) => {
+        // Filter out tasks that have ended
+        if (task.end_date && task.end_date < dateStr) return false
+
         if (task.recurring === 'daily') return true
         if (task.recurring === 'weekly' && task.due_date) {
           const taskDate = new Date(task.due_date + 'T00:00:00')
@@ -84,24 +92,41 @@ export default function QuestsPage() {
         return false
       })
 
-      // 4. Get IDs of all recurring tasks to check completions
+      // 3b. Fetch skipped task IDs for this date
       const recurringIds = filteredRecurring.map((t) => t.id)
+      let skippedTaskIds: Set<string> = new Set()
+
+      if (recurringIds.length > 0) {
+        const { data: skips } = await supabase
+          .from('task_skips')
+          .select('task_id')
+          .in('task_id', recurringIds)
+          .eq('skip_date', dateStr)
+
+        skippedTaskIds = new Set((skips || []).map((s) => s.task_id))
+      }
+
+      // 3c. Filter out skipped tasks
+      const unskippedRecurring = filteredRecurring.filter((task) => !skippedTaskIds.has(task.id))
+
+      // 4. Get IDs of unskipped recurring tasks to check completions
+      const unskippedIds = unskippedRecurring.map((t) => t.id)
 
       // 5. Fetch completions for recurring tasks on the selected date
       let completedTaskIds: Set<string> = new Set()
 
-      if (recurringIds.length > 0) {
+      if (unskippedIds.length > 0) {
         const { data: completions } = await supabase
           .from('task_completions')
           .select('task_id')
-          .in('task_id', recurringIds)
+          .in('task_id', unskippedIds)
           .eq('completion_date', dateStr)
 
         completedTaskIds = new Set((completions || []).map((c) => c.task_id))
       }
 
       // 6. Mark recurring tasks as completed/not for this specific date
-      const processedRecurring = filteredRecurring.map((task) => ({
+      const processedRecurring = unskippedRecurring.map((task) => ({
         ...task,
         completed: completedTaskIds.has(task.id),
       }))
@@ -161,6 +186,74 @@ export default function QuestsPage() {
 
   function handleEditTask(task: TaskWithAssignee) {
     setEditingTask(task)
+  }
+
+  function handleDeleteClick(task: TaskWithAssignee) {
+    setTaskToDelete(task)
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete) return
+    setDeleteError(null)
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskToDelete.id)
+
+    if (error) {
+      setDeleteError('You do not have permission to delete this quest.')
+      return
+    }
+
+    setTaskToDelete(null)
+    fetchData()
+  }
+
+  async function handleSkipToday() {
+    if (!taskToDelete) return
+    setDeleteError(null)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    const { error } = await supabase
+      .from('task_skips')
+      .insert({
+        task_id: taskToDelete.id,
+        skip_date: toDateString(selectedDate),
+        skipped_by: user.id,
+      })
+
+    if (error) {
+      setDeleteError('You do not have permission to skip this quest.')
+      return
+    }
+
+    setTaskToDelete(null)
+    fetchData()
+  }
+
+  async function handleEndRecurring() {
+    if (!taskToDelete) return
+    setDeleteError(null)
+
+    // Set end_date to yesterday so it stops appearing from today onwards
+    const yesterday = new Date(selectedDate)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ end_date: toDateString(yesterday) })
+      .eq('id', taskToDelete.id)
+
+    if (error) {
+      setDeleteError('You do not have permission to modify this quest.')
+      return
+    }
+
+    setTaskToDelete(null)
+    fetchData()
   }
 
   function handleCloseForm() {
@@ -309,6 +402,8 @@ export default function QuestsPage() {
         onComplete={handleCompleteTask}
         onUncomplete={handleUncompleteTask}
         onEdit={handleEditTask}
+        onDelete={handleDeleteClick}
+        currentUser={currentUser}
         emptyMessage="No quests for this day. Add one!"
         dateKey={toDateString(selectedDate)}
       />
@@ -331,6 +426,55 @@ export default function QuestsPage() {
         selectedDate={selectedDate}
         task={editingTask || undefined}
       />
+
+      <Modal
+        isOpen={!!taskToDelete}
+        onClose={() => { setTaskToDelete(null); setDeleteError(null); }}
+        title={taskToDelete?.recurring ? 'Remove Quest?' : 'Delete Quest?'}
+      >
+        {taskToDelete?.recurring ? (
+          <>
+            <p className="text-gray-600 mb-4">
+              &ldquo;{taskToDelete?.title}&rdquo; is a recurring quest. What would you like to do?
+            </p>
+            {deleteError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              <Button variant="secondary" onClick={handleSkipToday} className="w-full">
+                Skip today only
+              </Button>
+              <Button variant="danger" onClick={handleEndRecurring} className="w-full">
+                Stop all future occurrences
+              </Button>
+              <Button variant="ghost" onClick={() => { setTaskToDelete(null); setDeleteError(null); }} className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-gray-600 mb-4">
+              &ldquo;{taskToDelete?.title}&rdquo; will be permanently deleted. This cannot be undone.
+            </p>
+            {deleteError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => { setTaskToDelete(null); setDeleteError(null); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDelete} className="flex-1">
+                Delete
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

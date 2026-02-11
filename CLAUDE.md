@@ -85,3 +85,4 @@ lib/
 | ADR | Feature | Key Decisions |
 |-----|---------|---------------|
 | [001-undo-task](docs/adr/001-undo-task.md) | Undo task completion | RLS policy for permissions, DB trigger for points, clickable checkmark UI |
+| [002-delete-task](docs/adr/002-delete-task.md) | Delete task | Parent/kid permissions (RLS + UI), skip/end for recurring tasks, confirmation modal |
