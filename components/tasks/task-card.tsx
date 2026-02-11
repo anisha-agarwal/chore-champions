@@ -3,19 +3,25 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
-import type { TaskWithAssignee } from '@/lib/types'
+import type { Profile, TaskWithAssignee } from '@/lib/types'
 
 interface TaskCardProps {
   task: TaskWithAssignee
   onComplete: (taskId: string) => Promise<void>
   onUncomplete: (taskId: string) => Promise<void>
   onEdit: (task: TaskWithAssignee) => void
+  onDelete: (task: TaskWithAssignee) => void
+  currentUser: Profile | null
 }
 
-export function TaskCard({ task, onComplete, onUncomplete, onEdit }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, currentUser }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isUncompleting, setIsUncompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
+
+  // Determine if user can delete this task
+  // Parents can delete any task, kids can only delete tasks they created
+  const canDelete = currentUser?.role === 'parent' || task.created_by === currentUser?.id
 
   // Sync with prop when task data changes (e.g., navigating between days)
   useEffect(() => {
@@ -144,6 +150,17 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit }: TaskCardPro
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => onDelete(task)}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete quest"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
           )}

@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test'
 
 // Helper to create a test task via UI
-async function createTestTask(page: Page, taskName: string) {
+async function createTestTask(page: Page, taskName: string, recurring?: 'daily' | 'weekly') {
   // Click FAB button to open form
   const fab = page.locator('button.fixed.bg-purple-600')
   await fab.click()
@@ -11,6 +11,12 @@ async function createTestTask(page: Page, taskName: string) {
 
   // Fill in task name (using placeholder since label isn't associated)
   await page.getByPlaceholder(/clean your room/i).fill(taskName)
+
+  // If recurring is specified, select it from the Repeat dropdown
+  if (recurring) {
+    const repeatSelect = page.locator('select').last()
+    await repeatSelect.selectOption(recurring)
+  }
 
   // Submit the form
   await page.getByRole('button', { name: /create quest/i }).click()
@@ -148,5 +154,121 @@ test.describe('Quests Page', () => {
   test('points display in header', async ({ page }) => {
     // Header should show points
     await expect(page.getByText(/points/i)).toBeVisible()
+  })
+
+  test('delete task flow', async ({ page }) => {
+    const taskName = `Test Delete Task ${Date.now()}`
+
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Click the delete button
+    await taskCard.getByTitle('Delete quest').click()
+
+    // Confirmation modal should appear
+    await expect(page.getByRole('heading', { name: 'Delete Quest?' })).toBeVisible()
+    await expect(page.getByText(taskName, { exact: false })).toBeVisible()
+
+    // Click the Delete button in the modal
+    await page.getByRole('button', { name: 'Delete' }).click()
+
+    // Modal should close and task should be removed
+    await expect(page.getByRole('heading', { name: 'Delete Quest?' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('cancel delete does not remove task', async ({ page }) => {
+    const taskName = `Test Cancel Delete ${Date.now()}`
+
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Click the delete button
+    await taskCard.getByTitle('Delete quest').click()
+
+    // Confirmation modal should appear
+    await expect(page.getByRole('heading', { name: 'Delete Quest?' })).toBeVisible()
+
+    // Click Cancel
+    await page.getByRole('button', { name: 'Cancel' }).click()
+
+    // Modal should close and task should still exist
+    await expect(page.getByRole('heading', { name: 'Delete Quest?' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).toBeVisible()
+  })
+
+  test('recurring task shows skip and stop options', async ({ page }) => {
+    const taskName = `Test Recurring Options ${Date.now()}`
+
+    // Create a recurring task
+    await createTestTask(page, taskName, 'daily')
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Should show "Daily" badge
+    await expect(taskCard.getByText('Daily')).toBeVisible()
+
+    // Click the delete button
+    await taskCard.getByTitle('Delete quest').click()
+
+    // Modal should show recurring options
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Skip today only' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stop all future occurrences' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible()
+
+    // Cancel to close modal
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).not.toBeVisible()
+  })
+
+  test('skip today hides recurring task for today only', async ({ page }) => {
+    const taskName = `Test Skip Today ${Date.now()}`
+
+    // Create a recurring task
+    await createTestTask(page, taskName, 'daily')
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Click delete and skip today
+    await taskCard.getByTitle('Delete quest').click()
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).toBeVisible()
+    await page.getByRole('button', { name: 'Skip today only' }).click()
+
+    // Modal should close and task should be hidden
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('stop future removes recurring task', async ({ page }) => {
+    const taskName = `Test Stop Future ${Date.now()}`
+
+    // Create a recurring task
+    await createTestTask(page, taskName, 'daily')
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Click delete and stop all future
+    await taskCard.getByTitle('Delete quest').click()
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).toBeVisible()
+    await page.getByRole('button', { name: 'Stop all future occurrences' }).click()
+
+    // Modal should close and task should be removed
+    await expect(page.getByRole('heading', { name: 'Remove Quest?' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).not.toBeVisible({ timeout: 5000 })
   })
 })
