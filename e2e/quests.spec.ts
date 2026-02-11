@@ -1,39 +1,20 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import { createTestTask, getTaskCard, cleanupTestTask } from './helpers'
 
-// Helper to create a test task via UI
-async function createTestTask(page: Page, taskName: string, recurring?: 'daily' | 'weekly') {
-  // Click FAB button to open form
-  const fab = page.locator('button.fixed.bg-purple-600')
-  await fab.click()
-
-  // Wait for modal to open
-  await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
-
-  // Fill in task name (using placeholder since label isn't associated)
-  await page.getByPlaceholder(/clean your room/i).fill(taskName)
-
-  // If recurring is specified, select it from the Repeat dropdown
-  if (recurring) {
-    const repeatSelect = page.locator('select').last()
-    await repeatSelect.selectOption(recurring)
-  }
-
-  // Submit the form
-  await page.getByRole('button', { name: /create quest/i }).click()
-
-  // Wait for modal to close and task to appear
-  await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
-  await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
-}
-
-// Helper to find and return a task card by name
-function getTaskCard(page: Page, taskName: string) {
-  return page.locator('.bg-white.rounded-xl').filter({ hasText: taskName })
-}
+// Track task names created in each test for cleanup
+let createdTaskNames: string[] = []
 
 test.describe('Quests Page', () => {
   test.beforeEach(async ({ page }) => {
+    createdTaskNames = []
     await page.goto('/quests')
+  })
+
+  test.afterEach(async ({ page }) => {
+    // Clean up any tasks created during the test
+    for (const taskName of createdTaskNames) {
+      await cleanupTestTask(page, taskName)
+    }
   })
 
   test('displays quests page header', async ({ page }) => {
@@ -60,6 +41,7 @@ test.describe('Quests Page', () => {
 
   test('complete and undo task flow', async ({ page }) => {
     const taskName = `Test Complete Undo ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a test task
     await createTestTask(page, taskName)
@@ -87,6 +69,7 @@ test.describe('Quests Page', () => {
 
   test('completed task shows strikethrough text', async ({ page }) => {
     const taskName = `Test Strikethrough ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a test task
     await createTestTask(page, taskName)
@@ -109,6 +92,7 @@ test.describe('Quests Page', () => {
 
   test('edit button hidden on completed tasks', async ({ page }) => {
     const taskName = `Test Edit Hidden ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a test task
     await createTestTask(page, taskName)
@@ -131,6 +115,7 @@ test.describe('Quests Page', () => {
 
   test('edit button visible on incomplete tasks', async ({ page }) => {
     const taskName = `Test Edit Visible ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a test task
     await createTestTask(page, taskName)
@@ -182,6 +167,7 @@ test.describe('Quests Page', () => {
 
   test('cancel delete does not remove task', async ({ page }) => {
     const taskName = `Test Cancel Delete ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a test task
     await createTestTask(page, taskName)
@@ -206,6 +192,7 @@ test.describe('Quests Page', () => {
 
   test('recurring task shows skip and stop options', async ({ page }) => {
     const taskName = `Test Recurring Options ${Date.now()}`
+    createdTaskNames.push(taskName)
 
     // Create a recurring task
     await createTestTask(page, taskName, 'daily')
