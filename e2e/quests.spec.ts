@@ -172,8 +172,8 @@ test.describe('Quests Page', () => {
     // Confirmation modal should appear
     await expect(page.getByRole('heading', { name: 'Delete Quest?' })).toBeVisible()
 
-    // Click the Delete button in the modal
-    await page.getByRole('button', { name: 'Delete' }).click()
+    // Click the Delete button in the modal (exact match to avoid matching "Delete quest" buttons)
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
 
     // Modal should close and task should be removed
     await expect(page.getByRole('heading', { name: 'Delete Quest?' })).not.toBeVisible()
