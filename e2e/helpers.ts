@@ -96,6 +96,29 @@ export async function stopRecurringTask(page: Page, taskName: string) {
 }
 
 /**
+ * Edits a task's title via the UI
+ */
+export async function editTask(page: Page, taskName: string, newTitle: string) {
+  const taskCard = getTaskCard(page, taskName)
+  await taskCard.getByTitle('Edit quest').click()
+
+  // Wait for edit modal to open
+  await expect(page.getByRole('heading', { name: 'Edit Quest' })).toBeVisible()
+
+  // Clear and fill new title
+  const titleInput = page.getByPlaceholder(/clean your room/i)
+  await titleInput.clear()
+  await titleInput.fill(newTitle)
+
+  // Save changes
+  await page.getByRole('button', { name: /save changes/i }).click()
+
+  // Wait for modal to close and new title to appear
+  await expect(page.getByRole('heading', { name: 'Edit Quest' })).not.toBeVisible()
+  await expect(page.getByText(newTitle)).toBeVisible({ timeout: 5000 })
+}
+
+/**
  * Navigates to a page and waits for it to load
  */
 export async function navigateTo(page: Page, path: string) {
@@ -150,6 +173,13 @@ export class TestCleanup {
  * Silently succeeds if task doesn't exist
  */
 export async function cleanupTestTask(page: Page, taskName: string) {
+  // Close any open modals first by clicking the backdrop
+  const backdrop = page.locator('.fixed.inset-0.bg-black\\/50.z-40')
+  if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
+    await backdrop.click({ force: true })
+    await expect(backdrop).not.toBeVisible({ timeout: 3000 }).catch(() => {})
+  }
+
   // Make sure we're on the quests page
   if (!page.url().includes('/quests')) {
     await page.goto('/quests')

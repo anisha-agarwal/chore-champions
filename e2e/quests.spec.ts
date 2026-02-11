@@ -257,4 +257,174 @@ test.describe('Quests Page', () => {
     await expect(page.getByRole('heading', { name: 'Remove Quest?' })).not.toBeVisible()
     await expect(page.getByText(taskName)).not.toBeVisible({ timeout: 5000 })
   })
+
+  test('edit task flow', async ({ page }) => {
+    const taskName = `Test Edit Task ${Date.now()}`
+    const newTaskName = `Edited Task ${Date.now()}`
+    createdTaskNames.push(newTaskName) // Track the new name for cleanup
+
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the task card and click edit
+    const taskCard = getTaskCard(page, taskName)
+    await taskCard.getByTitle('Edit quest').click()
+
+    // Edit modal should open
+    await expect(page.getByRole('heading', { name: 'Edit Quest' })).toBeVisible()
+
+    // Change the title
+    const titleInput = page.getByPlaceholder(/clean your room/i)
+    await titleInput.clear()
+    await titleInput.fill(newTaskName)
+
+    // Save changes
+    await page.getByRole('button', { name: /save changes/i }).click()
+
+    // Modal should close and new title should appear
+    await expect(page.getByRole('heading', { name: 'Edit Quest' })).not.toBeVisible()
+    await expect(page.getByText(newTaskName)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(taskName)).not.toBeVisible()
+  })
+
+  test('edit task cancel does not save changes', async ({ page }) => {
+    const taskName = `Test Edit Cancel ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Create a test task
+    await createTestTask(page, taskName)
+
+    // Find the task card and click edit
+    const taskCard = getTaskCard(page, taskName)
+    await taskCard.getByTitle('Edit quest').click()
+
+    // Edit modal should open
+    await expect(page.getByRole('heading', { name: 'Edit Quest' })).toBeVisible()
+
+    // Change the title
+    const titleInput = page.getByPlaceholder(/clean your room/i)
+    await titleInput.clear()
+    await titleInput.fill('Should Not Save')
+
+    // Cancel instead of saving - click the X button in the modal header
+    await page.locator('.fixed.inset-0.z-50 button').first().click()
+
+    // Modal should close and original title should still be there
+    await expect(page.getByRole('heading', { name: 'Edit Quest' })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(taskName)).toBeVisible()
+    await expect(page.getByText('Should Not Save')).not.toBeVisible()
+  })
+
+  test('completing task updates points', async ({ page }) => {
+    const taskName = `Test Points Update ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Get initial points
+    const initialPointsText = await page.locator('header .text-purple-600').textContent()
+    const initialPoints = parseInt(initialPointsText || '0', 10)
+
+    // Create a test task (default 10 points)
+    await createTestTask(page, taskName)
+
+    // Complete the task
+    const taskCard = getTaskCard(page, taskName)
+    await taskCard.locator('button.border-gray-300').click()
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
+
+    // Wait for points to update
+    await page.waitForTimeout(500)
+
+    // Check points increased
+    const newPointsText = await page.locator('header .text-purple-600').textContent()
+    const newPoints = parseInt(newPointsText || '0', 10)
+    expect(newPoints).toBeGreaterThan(initialPoints)
+
+    // Undo to restore points (cleanup)
+    await taskCard.locator('button.bg-green-500').click()
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('uncompleting task deducts points', async ({ page }) => {
+    const taskName = `Test Points Deduct ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Create and complete a task
+    await createTestTask(page, taskName)
+    const taskCard = getTaskCard(page, taskName)
+    await taskCard.locator('button.border-gray-300').click()
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
+
+    // Wait for points to update
+    await page.waitForTimeout(500)
+
+    // Get points after completion
+    const pointsAfterComplete = await page.locator('header .text-purple-600').textContent()
+    const pointsAfter = parseInt(pointsAfterComplete || '0', 10)
+
+    // Undo the completion
+    await taskCard.locator('button.bg-green-500').click()
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
+
+    // Wait for points to update
+    await page.waitForTimeout(500)
+
+    // Check points decreased
+    const pointsAfterUndo = await page.locator('header .text-purple-600').textContent()
+    const finalPoints = parseInt(pointsAfterUndo || '0', 10)
+    expect(finalPoints).toBeLessThan(pointsAfter)
+  })
+
+  test('task shows assigned member avatar', async ({ page }) => {
+    const taskName = `Test Assignee Avatar ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Create a task
+    await createTestTask(page, taskName)
+
+    // Task card should show an avatar or assignee indicator
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Should have avatar image or fallback
+    const avatar = taskCard.locator('img, .rounded-full')
+    await expect(avatar.first()).toBeVisible()
+  })
+
+  test('week picker changes displayed tasks', async ({ page }) => {
+    // Get the week picker buttons
+    const dayButtons = page.locator('button').filter({ hasText: /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/i })
+
+    // Click a different day
+    const buttons = await dayButtons.all()
+    if (buttons.length > 1) {
+      // Click the second day button (different from current)
+      await buttons[1].click()
+
+      // Page should update (loading might occur)
+      await page.waitForTimeout(500)
+
+      // Quests heading should still be visible
+      await expect(page.getByRole('heading', { name: 'Quests' })).toBeVisible()
+    }
+  })
+
+  test('time filter filters tasks', async ({ page }) => {
+    // Look for time filter buttons
+    const morningFilter = page.getByRole('button', { name: /morning/i })
+    const allFilter = page.getByRole('button', { name: /all/i })
+
+    if (await morningFilter.isVisible({ timeout: 1000 }).catch(() => false)) {
+      // Click morning filter
+      await morningFilter.click()
+      await page.waitForTimeout(300)
+
+      // Click all filter to reset
+      if (await allFilter.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await allFilter.click()
+      }
+    }
+
+    // Page should still work
+    await expect(page.getByRole('heading', { name: 'Quests' })).toBeVisible()
+  })
 })

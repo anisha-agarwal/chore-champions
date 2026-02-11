@@ -10,7 +10,13 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "pw:demo": "tsx scripts/playwright-demo.ts",
+    "pw:smoke": "tsx scripts/playwright-smoke.ts",
+    "pw:seed": "tsx scripts/playwright-seed.ts",
+    "pw:seed:cleanup": "tsx scripts/playwright-seed.ts --cleanup",
+    "pw:record": "tsx scripts/playwright-record.ts",
+    "pw:record:narrated": "tsx scripts/playwright-record-narrated.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -39,6 +45,7 @@
     "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }
