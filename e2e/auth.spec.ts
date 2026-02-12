@@ -129,6 +129,34 @@ test.describe('Join Family Page', () => {
     await expect(page.getByRole('link', { name: /create a new family/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible()
   })
+
+  test('entering code navigates to join page with code', async ({ page }) => {
+    await page.goto('/join')
+
+    await page.getByLabel(/invite code/i).fill('testcode')
+    await page.getByRole('button', { name: /continue/i }).click()
+
+    // Should navigate to /join/TESTCODE (uppercase)
+    await expect(page).toHaveURL('/join/TESTCODE')
+  })
+
+  test('invalid invite code shows error', async ({ page }) => {
+    await page.goto('/join/INVALIDCODE123')
+
+    // Should show invalid invite error
+    await expect(page.getByRole('heading', { name: /invalid invite/i })).toBeVisible()
+    await expect(page.getByText(/invalid or expired/i)).toBeVisible()
+  })
+
+  test('converts invite code to uppercase in input', async ({ page }) => {
+    await page.goto('/join')
+
+    const input = page.getByLabel(/invite code/i)
+    await input.fill('abcd1234')
+
+    // Input should show uppercase
+    await expect(input).toHaveValue('ABCD1234')
+  })
 })
 
 test.describe('Role Selector', () => {
