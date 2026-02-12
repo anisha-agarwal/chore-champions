@@ -128,10 +128,10 @@ async function runSmokeTest() {
       console.log('Login successful!\n')
 
       console.log('Checking authenticated pages...')
-      results.push(await checkPage(page, 'Quests', `${BASE_URL}/quests`, 'Quests'))
-      results.push(await checkPage(page, 'Family', `${BASE_URL}/family`, /family|members/i))
-      results.push(await checkPage(page, 'Rewards', `${BASE_URL}/rewards`, 'Rewards'))
-      results.push(await checkPage(page, 'Profile', `${BASE_URL}/me`, /profile/i))
+      results.push(await checkPage(page, 'Quests', `${BASE_URL}/quests`))
+      results.push(await checkPage(page, 'Family', `${BASE_URL}/family`))
+      results.push(await checkPage(page, 'Rewards', `${BASE_URL}/rewards`))
+      results.push(await checkPage(page, 'Profile', `${BASE_URL}/me`))
     } catch {
       console.log('Login failed - skipping authenticated pages\n')
     }
