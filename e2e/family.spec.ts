@@ -89,4 +89,36 @@ test.describe('Family Page', () => {
     // Member cards should display points
     await expect(page.getByText(/\d+ pts/).first()).toBeVisible()
   })
+
+  test('invite code works case-insensitively', async ({ page, context }) => {
+    // Open invite modal to get the code
+    await page.getByRole('button', { name: 'Invite' }).click()
+    await expect(page.getByText(/invite code/i)).toBeVisible()
+
+    // Get the invite code from the modal (it's displayed in a monospace font)
+    const codeElement = page.locator('.font-mono.text-2xl')
+    const inviteCode = await codeElement.textContent()
+    expect(inviteCode).toBeTruthy()
+
+    // Close the modal
+    await page.getByRole('button', { name: 'Done' }).click()
+
+    // Open a new page (unauthenticated) to test the invite code
+    const newPage = await context.newPage()
+
+    // Test with UPPERCASE version
+    await newPage.goto(`/join/${inviteCode!.toUpperCase()}`)
+    await expect(newPage.getByRole('heading', { name: /join family/i })).toBeVisible({ timeout: 10000 })
+    await expect(newPage.getByText(/you've been invited/i)).toBeVisible()
+
+    // Test with lowercase version in a fresh page
+    const lowerPage = await context.newPage()
+    await lowerPage.goto(`/join/${inviteCode!.toLowerCase()}`)
+    await expect(lowerPage.getByRole('heading', { name: /join family/i })).toBeVisible({ timeout: 10000 })
+    await expect(lowerPage.getByText(/you've been invited/i)).toBeVisible()
+
+    // Cleanup
+    await newPage.close()
+    await lowerPage.close()
+  })
 })

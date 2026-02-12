@@ -132,6 +132,20 @@ async function runSmokeTest() {
       results.push(await checkPage(page, 'Family', `${BASE_URL}/family`))
       results.push(await checkPage(page, 'Rewards', `${BASE_URL}/rewards`))
       results.push(await checkPage(page, 'Profile', `${BASE_URL}/me`))
+
+      // Test invite code flow (case-insensitive)
+      console.log('\nChecking invite code flow...')
+      await page.goto(`${BASE_URL}/family`)
+      await page.getByRole('button', { name: 'Invite' }).click()
+      await page.waitForSelector('.font-mono.text-2xl', { timeout: 5000 })
+      const inviteCode = await page.locator('.font-mono.text-2xl').textContent()
+
+      if (inviteCode) {
+        // Test uppercase
+        results.push(await checkPage(page, 'Join (uppercase)', `${BASE_URL}/join/${inviteCode.toUpperCase()}`))
+        // Test lowercase
+        results.push(await checkPage(page, 'Join (lowercase)', `${BASE_URL}/join/${inviteCode.toLowerCase()}`))
+      }
     } catch {
       console.log('Login failed - skipping authenticated pages\n')
     }
