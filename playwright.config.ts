@@ -36,7 +36,17 @@ export default defineConfig({
         storageState: '.auth/parent.json',
       },
       dependencies: ['setup'],
-      testMatch: /quests\.spec\.ts|me\.spec\.ts/,
+      testMatch: /quests\.spec\.ts|me\.spec\.ts|family\.spec\.ts|rewards\.spec\.ts/,
+    },
+    // Tests that require child auth
+    {
+      name: 'child',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/child.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /permissions\.spec\.ts/,
     },
     // Auth page tests (login, signup, join) - no auth needed
     {
