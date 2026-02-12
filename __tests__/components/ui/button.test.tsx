@@ -65,7 +65,7 @@ describe('Button', () => {
   it('shows success state with checkmark', () => {
     render(<Button success>Save</Button>)
 
-    const button = screen.getByRole('button')
+    expect(screen.getByRole('button')).toBeInTheDocument()
     expect(screen.getByText('Saved')).toBeInTheDocument()
   })
 

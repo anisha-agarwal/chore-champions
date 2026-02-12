@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { MemberAvatar } from '@/components/family/member-avatar'
 import { InviteModal } from '@/components/family/invite-modal'
+import Link from 'next/link'
 import type { Profile, Family } from '@/lib/types'
 
 export default function FamilyPage() {
@@ -64,6 +65,7 @@ export default function FamilyPage() {
   }, [supabase])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
     fetchData()
   }, [fetchData])
 
@@ -157,12 +159,12 @@ export default function FamilyPage() {
 
         <div className="text-center">
           <p className="text-gray-600 mb-2">Or join an existing family</p>
-          <a
+          <Link
             href="/join"
             className="text-purple-600 font-semibold hover:underline"
           >
             Enter invite code
-          </a>
+          </Link>
         </div>
       </div>
     )
