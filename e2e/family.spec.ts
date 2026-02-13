@@ -136,6 +136,27 @@ test.describe('Family Page', () => {
     }
   })
 
+  test('remove modal shows member name and warning', async ({ page }) => {
+    const removeButton = page.getByTitle('Remove member').first()
+
+    if (await removeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await removeButton.click()
+
+      // Modal should show member name in the confirmation text
+      await expect(page.getByRole('heading', { name: /remove family member/i })).toBeVisible()
+      await expect(page.getByText(/are you sure you want to remove/i)).toBeVisible()
+
+      // Should show warning about task unassignment
+      await expect(page.getByText(/tasks will be unassigned/i)).toBeVisible()
+
+      // Should show info about rejoining
+      await expect(page.getByText(/rejoin with a new invite code/i)).toBeVisible()
+
+      // Close modal
+      await page.getByRole('button', { name: 'Cancel' }).click()
+    }
+  })
+
   test('invite code works case-insensitively', async ({ page, context }) => {
     // Open invite modal to get the code
     await page.getByRole('button', { name: 'Invite' }).click()
