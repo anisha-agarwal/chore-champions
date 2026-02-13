@@ -96,3 +96,4 @@ lib/
 | [001-undo-task](docs/adr/001-undo-task.md) | Undo task completion | RLS policy for permissions, DB trigger for points, clickable checkmark UI |
 | [002-delete-task](docs/adr/002-delete-task.md) | Delete task | Parent/kid permissions (RLS + UI), skip/end for recurring tasks, confirmation modal |
 | [003-invite-code-case-insensitive](docs/adr/003-invite-code-case-insensitive.md) | Invite code fix | Case-insensitive lookup using LOWER() in SQL function |
+| [004-remove-family-member](docs/adr/004-remove-family-member.md) | Remove family member | Parents only, unassign tasks on removal, confirmation modal |

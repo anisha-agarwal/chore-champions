@@ -111,17 +111,34 @@ async function runDemo() {
       await waitForLoad(page)
       await screenshot(page, '06-family')
 
-      // 8. Rewards Page
-      console.log('8. Rewards page...')
+      // 8. Invite Modal
+      console.log('8. Invite modal...')
+      await page.getByRole('button', { name: 'Invite' }).click()
+      await page.waitForSelector('.font-mono.text-2xl')
+      await screenshot(page, '07-invite-modal')
+      await page.getByRole('button', { name: 'Done' }).click()
+
+      // 9. Remove Member Modal (if other members exist)
+      const removeButton = page.getByTitle('Remove member').first()
+      if (await removeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        console.log('9. Remove member modal...')
+        await removeButton.click()
+        await page.waitForSelector('text=Remove Family Member')
+        await screenshot(page, '08-remove-member-modal')
+        await page.getByRole('button', { name: 'Cancel' }).click()
+      }
+
+      // 10. Rewards Page
+      console.log('10. Rewards page...')
       await page.goto(`${BASE_URL}/rewards`)
       await waitForLoad(page)
-      await screenshot(page, '07-rewards')
+      await screenshot(page, '09-rewards')
 
-      // 9. Me Page
-      console.log('9. Profile page...')
+      // 11. Me Page
+      console.log('11. Profile page...')
       await page.goto(`${BASE_URL}/me`)
       await waitForLoad(page)
-      await screenshot(page, '08-profile')
+      await screenshot(page, '10-profile')
     } else {
       console.log('\nSkipping authenticated pages (no TEST_PARENT_EMAIL/PASSWORD set)')
     }

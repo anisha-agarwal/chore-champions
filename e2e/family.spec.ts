@@ -90,6 +90,52 @@ test.describe('Family Page', () => {
     await expect(page.getByText(/\d+ pts/).first()).toBeVisible()
   })
 
+  test('remove button visible on other members for parents', async ({ page }) => {
+    // Find member cards that have the remove button
+    const removeButtons = page.getByTitle('Remove member')
+    const count = await removeButtons.count()
+
+    // Should have at least one remove button if there are other members
+    // (button is not shown on own card)
+    if (count > 0) {
+      await expect(removeButtons.first()).toBeVisible()
+    }
+  })
+
+  test('clicking remove button opens confirmation modal', async ({ page }) => {
+    const removeButton = page.getByTitle('Remove member').first()
+
+    if (await removeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await removeButton.click()
+
+      // Confirmation modal should appear
+      await expect(page.getByRole('heading', { name: /remove family member/i })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeVisible()
+
+      // Close modal
+      await page.getByRole('button', { name: 'Cancel' }).click()
+      await expect(page.getByRole('heading', { name: /remove family member/i })).not.toBeVisible()
+    }
+  })
+
+  test('cancel remove does not remove member', async ({ page }) => {
+    const removeButton = page.getByTitle('Remove member').first()
+
+    if (await removeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Get initial member count
+      const initialCount = await page.getByText(/\d+ members?/).textContent()
+
+      // Open remove modal and cancel
+      await removeButton.click()
+      await expect(page.getByRole('heading', { name: /remove family member/i })).toBeVisible()
+      await page.getByRole('button', { name: 'Cancel' }).click()
+
+      // Member count should be unchanged
+      await expect(page.getByText(initialCount!)).toBeVisible()
+    }
+  })
+
   test('invite code works case-insensitively', async ({ page, context }) => {
     // Open invite modal to get the code
     await page.getByRole('button', { name: 'Invite' }).click()

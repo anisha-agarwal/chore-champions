@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { MemberAvatar } from '@/components/family/member-avatar'
 import { InviteModal } from '@/components/family/invite-modal'
+import { Modal } from '@/components/ui/modal'
 import Link from 'next/link'
 import type { Profile, Family } from '@/lib/types'
 
@@ -14,6 +15,8 @@ export default function FamilyPage() {
   const [members, setMembers] = useState<Profile[]>([])
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [memberToRemove, setMemberToRemove] = useState<Profile | null>(null)
+  const [removing, setRemoving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [familyName, setFamilyName] = useState('')
@@ -113,6 +116,28 @@ export default function FamilyPage() {
     setCreating(false)
   }
 
+  async function handleRemoveMember() {
+    if (!memberToRemove) return
+
+    setRemoving(true)
+    setError(null)
+
+    const { error: removeError } = await supabase
+      .from('profiles')
+      .update({ family_id: null })
+      .eq('id', memberToRemove.id)
+
+    if (removeError) {
+      setError('Failed to remove member: ' + removeError.message)
+      setRemoving(false)
+      return
+    }
+
+    setMemberToRemove(null)
+    setRemoving(false)
+    fetchData()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -194,7 +219,18 @@ export default function FamilyPage() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {parents.map((member) => (
-              <Card key={member.id} className="p-4">
+              <Card key={member.id} className="relative p-4">
+                {currentUser?.role === 'parent' && member.id !== currentUser.id && (
+                  <button
+                    onClick={() => setMemberToRemove(member)}
+                    className="absolute top-0 left-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors z-10"
+                    title="Remove member"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
                 <MemberAvatar member={member} showPoints />
               </Card>
             ))}
@@ -209,7 +245,18 @@ export default function FamilyPage() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {children.map((member) => (
-              <Card key={member.id} className="p-4">
+              <Card key={member.id} className="relative p-4">
+                {currentUser?.role === 'parent' && member.id !== currentUser.id && (
+                  <button
+                    onClick={() => setMemberToRemove(member)}
+                    className="absolute top-0 left-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors z-10"
+                    title="Remove member"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
                 <MemberAvatar member={member} showPoints />
               </Card>
             ))}
@@ -224,6 +271,41 @@ export default function FamilyPage() {
           inviteCode={family.invite_code}
         />
       )}
+
+      <Modal
+        isOpen={!!memberToRemove}
+        onClose={() => setMemberToRemove(null)}
+        title="Remove Family Member?"
+      >
+        <p className="text-gray-600 mb-4">
+          Are you sure you want to remove <strong>{memberToRemove?.display_name}</strong> from {family.name}?
+        </p>
+        <p className="text-gray-500 text-sm mb-4">
+          Their tasks will be unassigned. They can rejoin with a new invite code.
+        </p>
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+            {error}
+          </div>
+        )}
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => setMemberToRemove(null)}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleRemoveMember}
+            disabled={removing}
+            className="flex-1"
+          >
+            {removing ? 'Removing...' : 'Remove'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -152,6 +152,15 @@ test.describe('Child Permissions', () => {
     await expect(inviteButton).not.toBeVisible({ timeout: 2000 })
   })
 
+  test('child cannot see remove member button', async ({ page }) => {
+    await page.goto('/family')
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
+
+    // Remove button should not be visible for children
+    const removeButton = page.getByTitle('Remove member')
+    await expect(removeButton).not.toBeVisible({ timeout: 2000 })
+  })
+
   test('child can access rewards page', async ({ page }) => {
     await page.goto('/rewards')
     await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })

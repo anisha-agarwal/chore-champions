@@ -146,6 +146,26 @@ async function runSmokeTest() {
         // Test lowercase
         results.push(await checkPage(page, 'Join (lowercase)', `${BASE_URL}/join/${inviteCode.toLowerCase()}`))
       }
+
+      // Test remove member UI (parents only)
+      console.log('\nChecking remove member UI...')
+      await page.goto(`${BASE_URL}/family`)
+      await page.waitForSelector('header h1', { timeout: 5000 })
+      const removeButton = page.getByTitle('Remove member').first()
+      const hasRemoveButton = await removeButton.isVisible({ timeout: 2000 }).catch(() => false)
+      if (hasRemoveButton) {
+        await removeButton.click()
+        const modalVisible = await page.getByRole('heading', { name: /remove family member/i }).isVisible({ timeout: 3000 }).catch(() => false)
+        if (modalVisible) {
+          results.push({ page: 'Remove member', url: `${BASE_URL}/family`, status: 'pass', loadTime: 0 })
+          await page.getByRole('button', { name: 'Cancel' }).click()
+        } else {
+          results.push({ page: 'Remove member', url: `${BASE_URL}/family`, status: 'fail', error: 'Modal did not open', loadTime: 0 })
+        }
+      } else {
+        // No other members to remove - this is OK
+        console.log('  (skipped - no other members)')
+      }
     } catch {
       console.log('Login failed - skipping authenticated pages\n')
     }
