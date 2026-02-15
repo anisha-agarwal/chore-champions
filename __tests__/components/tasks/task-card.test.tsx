@@ -175,6 +175,44 @@ describe('TaskCard', () => {
     })
   })
 
+  describe('Assignee Tooltip', () => {
+    it('shows nickname as tooltip when assignee has nickname', () => {
+      render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      // mockTask has profiles.nickname = 'Little T'
+      const avatar = screen.getByTitle('Little T')
+      expect(avatar).toBeInTheDocument()
+    })
+
+    it('shows display_name as tooltip when assignee has no nickname', () => {
+      const taskWithoutNickname: TaskWithAssignee = {
+        ...mockTask,
+        profiles: {
+          id: 'user-1',
+          display_name: 'Timmy',
+          avatar_url: null,
+          nickname: null,
+        },
+      }
+      render(<TaskCard task={taskWithoutNickname} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const avatar = screen.getByTitle('Timmy')
+      expect(avatar).toBeInTheDocument()
+    })
+
+    it('does not render avatar or tooltip when task has no assignee profile', () => {
+      const taskWithoutProfile: TaskWithAssignee = {
+        ...mockTask,
+        profiles: null,
+      }
+      render(<TaskCard task={taskWithoutProfile} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      // No avatar title should exist - check that neither nickname nor display_name appear as titles
+      expect(screen.queryByTitle('Little T')).not.toBeInTheDocument()
+      expect(screen.queryByTitle('Timmy')).not.toBeInTheDocument()
+    })
+  })
+
   describe('Edit Button', () => {
     it('renders edit button for incomplete tasks', () => {
       render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)

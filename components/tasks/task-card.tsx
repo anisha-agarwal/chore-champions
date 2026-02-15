@@ -169,6 +169,7 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
               src={task.profiles.avatar_url}
               fallback={task.profiles.nickname || task.profiles.display_name}
               size="sm"
+              title={task.profiles.nickname || task.profiles.display_name}
             />
           )}
         </div>
