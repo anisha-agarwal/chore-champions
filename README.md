@@ -174,7 +174,7 @@ erDiagram
 ### Task Completion Flow
 
 ```mermaid
-%%{init: {'theme': 'forest'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#ffffff', 'actorBorder': '#333333', 'actorTextColor': '#000000', 'actorLineColor': '#ffffff', 'signalColor': '#ffffff', 'signalTextColor': '#ffffff', 'labelTextColor': '#ffffff', 'loopTextColor': '#ffffff', 'labelBoxBkgColor': '#555555', 'labelBoxBorderColor': '#ffffff', 'noteBkgColor': '#ffffcc', 'noteTextColor': '#000000', 'noteBorderColor': '#ffffff', 'activationBkgColor': '#f0f0f0', 'activationBorderColor': '#ffffff'}}}%%
 sequenceDiagram
     actor Kid
     participant App
@@ -207,7 +207,7 @@ sequenceDiagram
 ### Rewards Redemption Flow
 
 ```mermaid
-%%{init: {'theme': 'forest'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff', 'primaryTextColor': '#000000', 'primaryBorderColor': '#333333', 'lineColor': '#ffffff', 'secondaryColor': '#f5f5f5', 'tertiaryColor': '#eeeeee', 'stateBkg': '#ffffff', 'stateBorder': '#333333', 'transitionColor': '#ffffff', 'transitionLabelColor': '#ffffff', 'stateLabelColor': '#000000'}}}%%
 stateDiagram-v2
     [*] --> Browsing: Kid opens store
     Browsing --> Selected: Select reward
@@ -221,39 +221,6 @@ stateDiagram-v2
     Approved --> Claimed: Points deducted
     Rejected --> Browsing: Try again
     Claimed --> [*]
-```
-
-## Roadmap
-
-```mermaid
-%%{init: {'theme': 'forest'}}%%
-gantt
-    title Chore Champions Development Roadmap
-    dateFormat YYYY-MM-DD
-
-    section Core Features
-    Authentication & Profiles     :done, auth, 2025-01-01, 2025-01-15
-    Task Management (Quests)      :done, tasks, 2025-01-15, 2025-01-30
-    Points System                 :done, points, 2025-01-25, 2025-02-05
-    Family Management             :done, family, 2025-02-01, 2025-02-15
-
-    section Gamification
-    Streaks                       :active, streaks, 2025-02-15, 7d
-    Leaderboards                  :leaderboard, after streaks, 5d
-    Badges & Achievements         :badges, after leaderboard, 10d
-    Levels & XP                   :levels, after badges, 7d
-
-    section Rewards System
-    Rewards Store                 :store, after levels, 7d
-    Custom Rewards                :custom, after store, 5d
-    Savings Goals                 :savings, after custom, 7d
-    Allowance Tracking            :allowance, after savings, 7d
-
-    section Trust & Engagement
-    Parental Approval             :approval, after allowance, 5d
-    Photo Proof                   :photo, after approval, 7d
-    Push Notifications            :notif, after photo, 10d
-    Visual Analytics              :analytics, after notif, 10d
 ```
 
 ## Tech Stack
