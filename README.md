@@ -41,7 +41,7 @@ A gamified family chore management app where kids earn points, level up, and red
 ## Features
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#1e293b', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff'}}}%%
 mindmap
   root((Chore Champions))
     Quests
@@ -69,7 +69,7 @@ mindmap
 ## Architecture
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
 flowchart TB
     subgraph Client["Frontend (Next.js 16)"]
         UI[React Components]
@@ -102,7 +102,7 @@ flowchart TB
 ## Database Schema
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#1e293b', 'lineColor': '#64748b', 'entityBkg': '#f8fafc', 'entityBorder': '#94a3b8'}}}%%
 erDiagram
     FAMILIES ||--o{ PROFILES : contains
     FAMILIES ||--o{ TASKS : has
@@ -174,7 +174,7 @@ erDiagram
 ### Task Completion Flow
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#94a3b8', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e2e8f0', 'actorTextColor': '#1e293b', 'actorBkg': '#f8fafc', 'actorBorder': '#94a3b8', 'signalColor': '#334155', 'signalTextColor': '#1e293b'}}}%%
 sequenceDiagram
     actor Kid
     participant App
@@ -207,7 +207,7 @@ sequenceDiagram
 ### Rewards Redemption Flow
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff', 'tertiaryColor': '#f1f5f9', 'stateBkg': '#f8fafc', 'stateBorder': '#94a3b8'}}}%%
 stateDiagram-v2
     [*] --> Browsing: Kid opens store
     Browsing --> Selected: Select reward
@@ -226,7 +226,7 @@ stateDiagram-v2
 ## Roadmap
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'sectionBkgColor': '#f1f5f9', 'altSectionBkgColor': '#e2e8f0', 'gridColor': '#94a3b8', 'todayLineColor': '#ef4444', 'taskTextColor': '#fff', 'taskTextOutsideColor': '#1e293b', 'doneTaskBkgColor': '#22c55e', 'doneTaskBorderColor': '#16a34a', 'activeTaskBkgColor': '#6366f1', 'activeTaskBorderColor': '#4f46e5'}}}%%
 gantt
     title Chore Champions Development Roadmap
     dateFormat YYYY-MM-DD
