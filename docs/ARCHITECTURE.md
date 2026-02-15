@@ -3,6 +3,7 @@
 ## System Context
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 C4Context
     title System Context Diagram
 
@@ -23,6 +24,7 @@ C4Context
 ## Component Architecture
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Browser["Browser"]
         subgraph NextJS["Next.js Application"]
@@ -79,6 +81,7 @@ flowchart TB
 ### Authentication Flow
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
     participant User
     participant App
@@ -103,6 +106,7 @@ sequenceDiagram
 ### Points & Gamification Flow
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart LR
     subgraph Trigger["Task Completion"]
         Complete["Complete Task"]
@@ -133,6 +137,7 @@ flowchart LR
 ### Table Relationships
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 erDiagram
     families ||--o{ profiles : "has members"
     families ||--o{ tasks : "has tasks"
@@ -169,6 +174,7 @@ erDiagram
 ## State Management
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
     [*] --> Anonymous
 
@@ -198,6 +204,7 @@ stateDiagram-v2
 ## Security Model
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Client["Client Side"]
         JWT["JWT Token"]
@@ -229,6 +236,7 @@ flowchart TB
 ### Caching Strategy
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart LR
     subgraph Request["Request"]
         Query["Query"]
@@ -265,6 +273,7 @@ flowchart LR
 ## Deployment Architecture
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph GitHub["GitHub"]
         Repo["Repository"]

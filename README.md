@@ -41,6 +41,7 @@ A gamified family chore management app where kids earn points, level up, and red
 ## Features
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 mindmap
   root((Chore Champions))
     Quests
@@ -68,6 +69,7 @@ mindmap
 ## Architecture
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Client["Frontend (Next.js 16)"]
         UI[React Components]
@@ -100,6 +102,7 @@ flowchart TB
 ## Database Schema
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 erDiagram
     FAMILIES ||--o{ PROFILES : contains
     FAMILIES ||--o{ TASKS : has
@@ -171,6 +174,7 @@ erDiagram
 ### Task Completion Flow
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
     actor Kid
     participant App
@@ -203,6 +207,7 @@ sequenceDiagram
 ### Rewards Redemption Flow
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
     [*] --> Browsing: Kid opens store
     Browsing --> Selected: Select reward
@@ -221,6 +226,7 @@ stateDiagram-v2
 ## Roadmap
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 gantt
     title Chore Champions Development Roadmap
     dateFormat YYYY-MM-DD

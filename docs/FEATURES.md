@@ -3,6 +3,7 @@
 ## Feature Overview
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 mindmap
     root((Features))
         Core
@@ -33,6 +34,7 @@ mindmap
 Track consecutive days of completing all assigned tasks.
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
     [*] --> Day1: Complete all tasks
 
@@ -68,6 +70,7 @@ stateDiagram-v2
 ### Levels & XP
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 xychart-beta
     title "XP Requirements per Level"
     x-axis [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -93,6 +96,7 @@ xychart-beta
 ### Badge System
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Categories["Badge Categories"]
         subgraph Streaks["Streak Badges"]
@@ -124,6 +128,7 @@ flowchart TB
 ### Leaderboard
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart LR
     subgraph Views["Leaderboard Views"]
         Weekly["This Week"]
@@ -149,6 +154,7 @@ flowchart LR
 ### Reward Lifecycle
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
     [*] --> Created: Parent creates reward
 
@@ -178,6 +184,7 @@ stateDiagram-v2
 ### Savings Goals
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Goal["Savings Goal"]
         Target["Target: 500 pts"]
@@ -204,6 +211,7 @@ flowchart TB
 ### Allowance Flow
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
     participant Kid
     participant App
@@ -229,6 +237,7 @@ sequenceDiagram
 ### Task States
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 stateDiagram-v2
     [*] --> Pending: Task created
 
@@ -256,6 +265,7 @@ stateDiagram-v2
 ### Recurring Tasks
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Daily["Daily Tasks"]
         D1["Make Bed"]
@@ -285,6 +295,7 @@ flowchart TB
 ### Parent Analytics
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 pie showData
     title Task Completion Rate (This Week)
     "Completed" : 42
@@ -296,6 +307,7 @@ pie showData
 ### Kid Analytics
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 xychart-beta
     title "Points Earned (Last 7 Days)"
     x-axis ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -324,6 +336,7 @@ W4   ███ ░░░ ███ ███ ███ ███ ███
 ### Notification Types
 
 ```mermaid
+%%{init: {'theme': 'neutral'}}%%
 flowchart TB
     subgraph Triggers["Triggers"]
         TaskDue["Task Due Soon"]
