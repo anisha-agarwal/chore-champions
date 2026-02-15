@@ -390,6 +390,43 @@ test.describe('Quests Page', () => {
     await expect(avatar.first()).toBeVisible()
   })
 
+  test('assigned task avatar shows name tooltip', async ({ page }) => {
+    const taskName = `Test Tooltip ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Get a family member name to assign to (from the Assign To dropdown)
+    const fab = page.locator('button.fixed.bg-purple-600')
+    await fab.click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+
+    // Get first family member option (skip "Anyone")
+    const assignSelect = page.locator('select').nth(2)
+    const options = assignSelect.locator('option')
+    const optionCount = await options.count()
+
+    if (optionCount <= 1) {
+      // No family members to assign to - close modal and skip
+      await page.locator('.fixed.inset-0.z-50 button').first().click()
+      return
+    }
+
+    // Get the second option (first family member after "Anyone")
+    const memberName = await options.nth(1).textContent()
+    await page.locator('.fixed.inset-0.z-50 button').first().click() // Close modal
+    await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
+
+    // Create task assigned to that member
+    await createTestTask(page, taskName, { assignTo: memberName! })
+
+    // Find the task card
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible()
+
+    // Avatar should have title attribute with assignee name
+    const avatar = taskCard.locator('div.rounded-full[title]')
+    await expect(avatar).toHaveAttribute('title', memberName!)
+  })
+
   test('week picker changes displayed tasks', async ({ page }) => {
     // Get the week picker buttons
     const dayButtons = page.locator('button').filter({ hasText: /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/i })
