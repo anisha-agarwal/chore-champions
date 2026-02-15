@@ -174,7 +174,7 @@ erDiagram
 ### Task Completion Flow
 
 ```mermaid
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'forest'}}%%
 sequenceDiagram
     actor Kid
     participant App
@@ -207,7 +207,7 @@ sequenceDiagram
 ### Rewards Redemption Flow
 
 ```mermaid
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'forest'}}%%
 stateDiagram-v2
     [*] --> Browsing: Kid opens store
     Browsing --> Selected: Select reward
@@ -226,7 +226,7 @@ stateDiagram-v2
 ## Roadmap
 
 ```mermaid
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'forest'}}%%
 gantt
     title Chore Champions Development Roadmap
     dateFormat YYYY-MM-DD
