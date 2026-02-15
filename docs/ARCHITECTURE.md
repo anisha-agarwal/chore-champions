@@ -3,7 +3,7 @@
 ## System Context
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'default'}}%%
 C4Context
     title System Context Diagram
 
@@ -24,7 +24,7 @@ C4Context
 ## Component Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Browser["Browser"]
         subgraph NextJS["Next.js Application"]
@@ -81,7 +81,7 @@ flowchart TB
 ### Authentication Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#94a3b8', 'secondaryColor': '#f1f5f9', 'actorTextColor': '#1e293b', 'actorBkg': '#f8fafc', 'actorBorder': '#94a3b8', 'signalColor': '#334155', 'signalTextColor': '#1e293b'}}}%%
+%%{init: {'theme': 'default'}}%%
 sequenceDiagram
     participant User
     participant App
@@ -106,7 +106,7 @@ sequenceDiagram
 ### Points & Gamification Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart LR
     subgraph Trigger["Task Completion"]
         Complete["Complete Task"]
@@ -137,7 +137,7 @@ flowchart LR
 ### Table Relationships
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'default'}}%%
 erDiagram
     families ||--o{ profiles : "has members"
     families ||--o{ tasks : "has tasks"
@@ -174,7 +174,7 @@ erDiagram
 ## State Management
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff', 'stateBkg': '#f8fafc', 'stateBorder': '#94a3b8'}}}%%
+%%{init: {'theme': 'default'}}%%
 stateDiagram-v2
     [*] --> Anonymous
 
@@ -204,7 +204,7 @@ stateDiagram-v2
 ## Security Model
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Client["Client Side"]
         JWT["JWT Token"]
@@ -236,7 +236,7 @@ flowchart TB
 ### Caching Strategy
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart LR
     subgraph Request["Request"]
         Query["Query"]
@@ -273,7 +273,7 @@ flowchart LR
 ## Deployment Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph GitHub["GitHub"]
         Repo["Repository"]

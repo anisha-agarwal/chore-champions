@@ -3,7 +3,7 @@
 ## Feature Overview
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'default'}}%%
 mindmap
     root((Features))
         Core
@@ -34,7 +34,7 @@ mindmap
 Track consecutive days of completing all assigned tasks.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff', 'stateBkg': '#f8fafc', 'stateBorder': '#94a3b8'}}}%%
+%%{init: {'theme': 'default'}}%%
 stateDiagram-v2
     [*] --> Day1: Complete all tasks
 
@@ -70,7 +70,7 @@ stateDiagram-v2
 ### Levels & XP
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'default'}}%%
 xychart-beta
     title "XP Requirements per Level"
     x-axis [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -96,7 +96,7 @@ xychart-beta
 ### Badge System
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Categories["Badge Categories"]
         subgraph Streaks["Streak Badges"]
@@ -128,7 +128,7 @@ flowchart TB
 ### Leaderboard
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart LR
     subgraph Views["Leaderboard Views"]
         Weekly["This Week"]
@@ -154,7 +154,7 @@ flowchart LR
 ### Reward Lifecycle
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff', 'stateBkg': '#f8fafc', 'stateBorder': '#94a3b8'}}}%%
+%%{init: {'theme': 'default'}}%%
 stateDiagram-v2
     [*] --> Created: Parent creates reward
 
@@ -184,7 +184,7 @@ stateDiagram-v2
 ### Savings Goals
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Goal["Savings Goal"]
         Target["Target: 500 pts"]
@@ -211,7 +211,7 @@ flowchart TB
 ### Allowance Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#94a3b8', 'secondaryColor': '#f1f5f9', 'actorTextColor': '#1e293b', 'actorBkg': '#f8fafc', 'actorBorder': '#94a3b8', 'signalColor': '#334155', 'signalTextColor': '#1e293b'}}}%%
+%%{init: {'theme': 'default'}}%%
 sequenceDiagram
     participant Kid
     participant App
@@ -237,7 +237,7 @@ sequenceDiagram
 ### Task States
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#e0e7ff', 'stateBkg': '#f8fafc', 'stateBorder': '#94a3b8'}}}%%
+%%{init: {'theme': 'default'}}%%
 stateDiagram-v2
     [*] --> Pending: Task created
 
@@ -265,7 +265,7 @@ stateDiagram-v2
 ### Recurring Tasks
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Daily["Daily Tasks"]
         D1["Make Bed"]
@@ -295,7 +295,7 @@ flowchart TB
 ### Parent Analytics
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#6366f1', 'pie2': '#22c55e', 'pie3': '#f59e0b', 'pie4': '#ef4444', 'pieStrokeColor': '#fff', 'pieStrokeWidth': '2px', 'pieLegendTextColor': '#1e293b', 'pieSectionTextColor': '#fff'}}}%%
+%%{init: {'theme': 'default'}}%%
 pie showData
     title Task Completion Rate (This Week)
     "Completed" : 42
@@ -307,7 +307,7 @@ pie showData
 ### Kid Analytics
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
+%%{init: {'theme': 'default'}}%%
 xychart-beta
     title "Points Earned (Last 7 Days)"
     x-axis ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -336,7 +336,7 @@ W4   ███ ░░░ ███ ███ ███ ███ ███
 ### Notification Types
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#f1f5f9', 'tertiaryColor': '#e0e7ff', 'background': '#ffffff', 'nodeBkg': '#f8fafc', 'nodeBorder': '#94a3b8', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#cbd5e1', 'edgeLabelBackground': '#ffffff'}}}%%
+%%{init: {'theme': 'default'}}%%
 flowchart TB
     subgraph Triggers["Triggers"]
         TaskDue["Task Due Soon"]
