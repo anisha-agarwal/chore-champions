@@ -15,7 +15,6 @@
 /playwright-report/
 /test-results/
 /.auth/
-/screenshots/
 /videos/
 
 # next.js
