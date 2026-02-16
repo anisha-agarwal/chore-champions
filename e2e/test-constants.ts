@@ -1,0 +1,6 @@
+export const TEST_PARENT_EMAIL = 'e2e-parent@chore-champions-test.local'
+export const TEST_PARENT_PASSWORD = 'TestPassword123!'
+export const TEST_CHILD_EMAIL = 'e2e-child@chore-champions-test.local'
+export const TEST_CHILD_PASSWORD = 'TestPassword123!'
+export const TEST_FAMILY_NAME = 'E2E Test Family'
+export const SUPABASE_PROJECT_REF = 'eebssnhneusiyuffoajj'
