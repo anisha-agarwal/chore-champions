@@ -168,6 +168,22 @@ async function runSmokeTest() {
         results.push({ page: 'Email invite tab', url: `${BASE_URL}/family`, status: 'fail', error: 'Tab not visible', loadTime: 0 })
       }
 
+      // Test due time input in quest form
+      console.log('\nChecking due time input in quest form...')
+      await page.goto(`${BASE_URL}/quests`)
+      await page.waitForSelector('header h1', { timeout: 5000 })
+      const questFab = page.locator('button.fixed.bg-purple-600')
+      await questFab.click()
+      const dueTimeInput = page.getByLabel('Due Time (optional)')
+      const dueTimeVisible = await dueTimeInput.isVisible({ timeout: 3000 }).catch(() => false)
+      if (dueTimeVisible) {
+        results.push({ page: 'Due time input', url: `${BASE_URL}/quests`, status: 'pass', loadTime: 0 })
+      } else {
+        results.push({ page: 'Due time input', url: `${BASE_URL}/quests`, status: 'fail', error: 'Due time input not found in quest form', loadTime: 0 })
+      }
+      // Close the modal
+      await page.locator('.fixed.inset-0.z-50 button').first().click().catch(() => {})
+
       // Test remove member UI (parents only)
       console.log('\nChecking remove member UI...')
       await page.goto(`${BASE_URL}/family`)
