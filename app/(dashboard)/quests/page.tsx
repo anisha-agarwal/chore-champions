@@ -9,7 +9,7 @@ import { TaskForm } from '@/components/tasks/task-form'
 import { MemberFilter } from '@/components/family/member-filter'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { toDateString } from '@/lib/utils'
+import { toDateString, combineDateAndTime } from '@/lib/utils'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
 
 export default function QuestsPage() {
@@ -150,23 +150,29 @@ export default function QuestsPage() {
     recurring: string | null
     assigned_to: string | null
     due_date: string | null
+    due_time: string | null
   }, taskId?: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !currentUser?.family_id) throw new Error('Not authenticated')
+
+    // Only include due_time in the payload when it has a value,
+    // so the request still works if the column hasn't been added yet
+    const baseFields = {
+      title: taskData.title,
+      description: taskData.description,
+      points: taskData.points,
+      time_of_day: taskData.time_of_day,
+      recurring: taskData.recurring,
+      assigned_to: taskData.assigned_to,
+      due_date: taskData.due_date,
+      ...(taskData.due_time != null ? { due_time: taskData.due_time } : {}),
+    }
 
     if (taskId) {
       // Update existing task
       const { error } = await supabase
         .from('tasks')
-        .update({
-          title: taskData.title,
-          description: taskData.description,
-          points: taskData.points,
-          time_of_day: taskData.time_of_day,
-          recurring: taskData.recurring,
-          assigned_to: taskData.assigned_to,
-          due_date: taskData.due_date,
-        })
+        .update(baseFields)
         .eq('id', taskId)
 
       if (error) throw error
@@ -174,7 +180,7 @@ export default function QuestsPage() {
     } else {
       // Create new task
       const { error } = await supabase.from('tasks').insert({
-        ...taskData,
+        ...baseFields,
         family_id: currentUser.family_id,
         created_by: user.id,
       })
@@ -279,6 +285,9 @@ export default function QuestsPage() {
       if (updateError) throw updateError
     }
 
+    // Calculate points: half points if the task is overdue
+    const pointsEarned = isTaskOverdue(task) ? Math.floor(task.points / 2) : task.points
+
     // Create completion record
     // For recurring tasks, store the completion_date so we can query by date.
     // completed_at keeps its database default (now()) for audit purposes.
@@ -287,7 +296,7 @@ export default function QuestsPage() {
       .insert({
         task_id: taskId,
         completed_by: user.id,
-        points_earned: task.points,
+        points_earned: pointsEarned,
         completion_date: task.recurring ? toDateString(selectedDate) : null,
       })
 
@@ -330,6 +339,16 @@ export default function QuestsPage() {
 
     // Database trigger handles point deduction
     fetchData()
+  }
+
+  // Check if a task with a due_time is past its deadline
+  function isTaskOverdue(task: TaskWithAssignee): boolean {
+    if (!task.due_time) return false
+    // For recurring tasks, use selectedDate; for one-time tasks, use due_date
+    const dateStr = task.recurring ? toDateString(selectedDate) : task.due_date
+    if (!dateStr) return false
+    const deadline = combineDateAndTime(dateStr, task.due_time)
+    return new Date() > deadline
   }
 
   // Filter tasks
@@ -407,6 +426,7 @@ export default function QuestsPage() {
         currentUser={currentUser}
         emptyMessage="No quests for this day. Add one!"
         dateKey={toDateString(selectedDate)}
+        selectedDate={selectedDate}
       />
 
       {/* FAB */}

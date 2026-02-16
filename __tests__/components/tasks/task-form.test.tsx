@@ -36,6 +36,7 @@ const mockTask: TaskWithAssignee = {
   time_of_day: 'morning',
   recurring: 'daily',
   due_date: '2024-01-15',
+  due_time: null,
   completed: false,
   created_by: 'user-2',
   created_at: '2024-01-01T00:00:00Z',
@@ -224,6 +225,69 @@ describe('TaskForm', () => {
           'task-1'
         )
       })
+    })
+  })
+
+  describe('Due Time', () => {
+    it('renders due time input', () => {
+      render(<TaskForm {...defaultProps} />)
+      expect(screen.getByLabelText('Due Time (optional)')).toBeInTheDocument()
+    })
+
+    it('submits null due_time when not set', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'New Task')
+
+      const submitButton = screen.getByRole('button', { name: 'Create Quest' })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ due_time: null }),
+          undefined
+        )
+      })
+    })
+
+    it('submits due_time when set', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'New Task')
+
+      const timeInput = screen.getByLabelText('Due Time (optional)')
+      // fireEvent is needed for time inputs since userEvent doesn't handle them well
+      const { fireEvent } = await import('@testing-library/react')
+      fireEvent.change(timeInput, { target: { value: '14:30' } })
+
+      const submitButton = screen.getByRole('button', { name: 'Create Quest' })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ due_time: '14:30:00' }),
+          undefined
+        )
+      })
+    })
+
+    it('pre-populates due time in edit mode', () => {
+      const taskWithTime = { ...mockTask, due_time: '14:30:00' }
+      render(<TaskForm {...defaultProps} task={taskWithTime} />)
+
+      const timeInput = screen.getByLabelText('Due Time (optional)') as HTMLInputElement
+      expect(timeInput.value).toBe('14:30')
+    })
+
+    it('pre-populates empty due time in edit mode when null', () => {
+      render(<TaskForm {...defaultProps} task={mockTask} />)
+
+      const timeInput = screen.getByLabelText('Due Time (optional)') as HTMLInputElement
+      expect(timeInput.value).toBe('')
     })
   })
 
