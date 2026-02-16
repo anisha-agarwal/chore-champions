@@ -87,6 +87,25 @@ test.describe('Me Page', () => {
     await expect(underline).toHaveClass(/bg-purple-600/)
   })
 
+  test('displays email address', async ({ page }) => {
+    await expect(page.getByText('Email')).toBeVisible()
+    const emailInput = page.locator('input[id="email"]')
+    await expect(emailInput).toBeVisible()
+    await expect(emailInput).toHaveAttribute('readOnly', '')
+  })
+
+  test('change password link opens modal', async ({ page }) => {
+    await page.getByRole('button', { name: 'Change Password' }).click()
+    await expect(page.getByText('New Password')).toBeVisible()
+    await expect(page.getByText('Confirm Password')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Update Password' })).toBeVisible()
+  })
+
+  test('sign out button is in header', async ({ page }) => {
+    const header = page.locator('header')
+    await expect(header.getByRole('button', { name: 'Sign Out' })).toBeVisible()
+  })
+
   test('page has mobile-first max-width container', async ({ page }) => {
     const container = page.locator('main .max-w-md')
     await expect(container).toBeVisible()

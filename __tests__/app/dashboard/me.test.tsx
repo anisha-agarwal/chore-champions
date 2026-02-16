@@ -20,6 +20,7 @@ jest.mock('next/image', () => ({
 // Mock Supabase client
 const mockGetUser = jest.fn()
 const mockSignOut = jest.fn()
+const mockUpdateUser = jest.fn().mockResolvedValue({ error: null })
 const mockSupabaseData = {
   profile: null as unknown,
   parentCount: 2,
@@ -33,6 +34,9 @@ jest.mock('@/lib/supabase/client', () => ({
       },
       get signOut() {
         return mockSignOut
+      },
+      get updateUser() {
+        return mockUpdateUser
       },
     },
     from: () => ({
@@ -74,7 +78,7 @@ describe('Me Page', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetUser.mockResolvedValue({
-      data: { user: { id: 'user-123' } },
+      data: { user: { id: 'user-123', email: 'test@example.com' } },
     })
     mockSupabaseData.profile = mockProfile
     mockSupabaseData.parentCount = 2
@@ -229,6 +233,54 @@ describe('Me Page', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Sign Out' })).toBeInTheDocument()
+  })
+
+  it('displays email address as read-only', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Email')).toBeInTheDocument()
+    const emailInput = screen.getByDisplayValue('test@example.com')
+    expect(emailInput).toHaveAttribute('readOnly')
+  })
+
+  it('renders Change Password button', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: 'Change Password' })).toBeInTheDocument()
+  })
+
+  it('opens change password modal', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+    expect(screen.getByText('New Password')).toBeInTheDocument()
+    expect(screen.getByText('Confirm Password')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Update Password' })).toBeInTheDocument()
+  })
+
+  it('sign out button is in the header', async () => {
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    const header = screen.getByText('My Profile').closest('header')
+    expect(header).toContainElement(screen.getByRole('button', { name: 'Sign Out' }))
   })
 
   it('displays "Tap to change avatar" caption under avatar', async () => {
