@@ -13,6 +13,7 @@ import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
 
 export default function MePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [nickname, setNickname] = useState('')
   const [role, setRole] = useState<Role>('child')
@@ -21,6 +22,12 @@ export default function MePage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -39,6 +46,7 @@ export default function MePage() {
 
     if (data) {
       setProfile(data)
+      setEmail(user.email || '')
       setDisplayName(data.display_name)
       setNickname(data.nickname || '')
       setRole(data.role)
@@ -104,6 +112,41 @@ export default function MePage() {
     setIsAvatarOpen(false)
   }
 
+  function handleOpenPasswordModal() {
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError(null)
+    setPasswordSuccess(false)
+    setIsPasswordOpen(true)
+  }
+
+  async function handleChangePassword() {
+    setPasswordError(null)
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.')
+      return
+    }
+
+    setPasswordSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPasswordSaving(false)
+
+    if (error) {
+      setPasswordError(error.message)
+      return
+    }
+
+    setPasswordSuccess(true)
+    setNewPassword('')
+    setConfirmPassword('')
+    setTimeout(() => setIsPasswordOpen(false), 1500)
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -129,11 +172,17 @@ export default function MePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Page title */}
-      <header className="px-6 pt-6 pb-2">
+      <header className="px-6 pt-6 pb-2 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+        <button
+          onClick={handleSignOut}
+          className="text-sm text-red-600 hover:text-red-700 font-medium"
+        >
+          Sign Out
+        </button>
       </header>
 
-      <main className="flex-1 px-6 pt-4 pb-32">
+      <main className="flex-1 px-6 pt-4 pb-24">
         <div className="max-w-md mx-auto">
           {/* Avatar Section */}
           <section className="flex flex-col items-center mb-10">
@@ -175,6 +224,20 @@ export default function MePage() {
                 Personal Info
               </h2>
               <div className="space-y-6">
+                <div>
+                  <UnderlineInput
+                    label="Email"
+                    value={email}
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    onClick={handleOpenPasswordModal}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+                  >
+                    Change Password
+                  </button>
+                </div>
                 <UnderlineInput
                   label="Display Name"
                   value={displayName}
@@ -208,35 +271,18 @@ export default function MePage() {
               )}
             </section>
 
-            {/* Sign Out */}
-            <section className="mt-8">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleSignOut}
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 justify-start px-0"
-              >
-                Sign Out
-              </Button>
-            </section>
+            {/* Save Changes */}
+            <Button
+              type="submit"
+              loading={saving}
+              success={saveSuccess}
+              className="w-full h-12"
+            >
+              Save Changes
+            </Button>
           </form>
         </div>
       </main>
-
-      {/* Save button footer */}
-      <footer className="px-6 pb-6">
-        <div className="max-w-md mx-auto">
-          <Button
-            type="button"
-            onClick={handleSave}
-            loading={saving}
-            success={saveSuccess}
-            className="w-full h-12"
-          >
-            Save Changes
-          </Button>
-        </div>
-      </footer>
 
       {/* Avatar Selection Modal */}
       <Modal
@@ -263,6 +309,73 @@ export default function MePage() {
               <span className="text-xs text-gray-600 mt-1 block">{avatar.name}</span>
             </button>
           ))}
+        </div>
+      </Modal>
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={isPasswordOpen}
+        onClose={() => setIsPasswordOpen(false)}
+        title="Change Password"
+      >
+        <div className="space-y-4">
+          {passwordSuccess ? (
+            <p className="text-green-600 font-medium text-center py-4">
+              Password updated successfully!
+            </p>
+          ) : (
+            <>
+              {passwordError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {passwordError}
+                </div>
+              )}
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                  placeholder="At least 6 characters"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsPasswordOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleChangePassword}
+                  loading={passwordSaving}
+                  disabled={!newPassword || !confirmPassword}
+                  className="flex-1"
+                >
+                  Update Password
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </div>
