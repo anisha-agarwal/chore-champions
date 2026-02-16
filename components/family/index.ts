@@ -1,3 +1,5 @@
 export { MemberFilter } from './member-filter'
 export { MemberAvatar } from './member-avatar'
 export { InviteModal } from './invite-modal'
+export { PendingInvites } from './pending-invites'
+export { SentInvites } from './sent-invites'

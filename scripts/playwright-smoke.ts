@@ -147,6 +147,27 @@ async function runSmokeTest() {
         results.push(await checkPage(page, 'Join (lowercase)', `${BASE_URL}/join/${inviteCode.toLowerCase()}`))
       }
 
+      // Test email invite tab in modal
+      console.log('\nChecking email invite tab...')
+      await page.goto(`${BASE_URL}/family`)
+      await page.waitForSelector('header h1', { timeout: 5000 })
+      await page.getByRole('button', { name: 'Invite' }).click()
+      const emailTab = page.getByText('Invite by Email')
+      const emailTabVisible = await emailTab.isVisible({ timeout: 3000 }).catch(() => false)
+      if (emailTabVisible) {
+        await emailTab.click()
+        const emailInput = await page.getByLabel('Email Address').isVisible({ timeout: 3000 }).catch(() => false)
+        if (emailInput) {
+          results.push({ page: 'Email invite tab', url: `${BASE_URL}/family`, status: 'pass', loadTime: 0 })
+        } else {
+          results.push({ page: 'Email invite tab', url: `${BASE_URL}/family`, status: 'fail', error: 'Email input not found', loadTime: 0 })
+        }
+        // Close modal
+        await page.getByRole('button', { name: 'Done' }).click().catch(() => {})
+      } else {
+        results.push({ page: 'Email invite tab', url: `${BASE_URL}/family`, status: 'fail', error: 'Tab not visible', loadTime: 0 })
+      }
+
       // Test remove member UI (parents only)
       console.log('\nChecking remove member UI...')
       await page.goto(`${BASE_URL}/family`)
