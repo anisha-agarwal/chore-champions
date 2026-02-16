@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { MemberAvatar } from '@/components/family/member-avatar'
 import { InviteModal } from '@/components/family/invite-modal'
+import { PendingInvites } from '@/components/family/pending-invites'
+import { SentInvites } from '@/components/family/sent-invites'
 import { Modal } from '@/components/ui/modal'
 import Link from 'next/link'
 import type { Profile, Family } from '@/lib/types'
@@ -154,6 +156,10 @@ export default function FamilyPage() {
           <p className="text-gray-600 mt-1">Create a family to get started!</p>
         </header>
 
+        {currentUser && (
+          <PendingInvites userId={currentUser.id} onAccepted={fetchData} />
+        )}
+
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleCreateFamily} className="space-y-4">
@@ -163,10 +169,11 @@ export default function FamilyPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="family-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Family Name
                 </label>
                 <input
+                  id="family-name"
                   type="text"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
@@ -264,12 +271,18 @@ export default function FamilyPage() {
         </section>
       )}
 
-      {family.invite_code && (
+      {family.invite_code && currentUser && (
         <InviteModal
           isOpen={isInviteOpen}
           onClose={() => setIsInviteOpen(false)}
           inviteCode={family.invite_code}
+          familyId={family.id}
+          currentUserId={currentUser.id}
         />
+      )}
+
+      {currentUser?.role === 'parent' && (
+        <SentInvites familyId={family.id} />
       )}
 
       <Modal

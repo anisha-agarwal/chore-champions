@@ -124,8 +124,51 @@ export type Database = {
           completion_date?: string | null
         }
       }
+      family_invites: {
+        Row: {
+          id: string
+          family_id: string
+          invited_by: string
+          invited_user_id: string
+          status: 'pending' | 'accepted' | 'declined'
+          created_at: string
+          responded_at: string | null
+        }
+        Insert: {
+          id?: string
+          family_id: string
+          invited_by: string
+          invited_user_id: string
+          status?: 'pending' | 'accepted' | 'declined'
+          created_at?: string
+          responded_at?: string | null
+        }
+        Update: {
+          id?: string
+          family_id?: string
+          invited_by?: string
+          invited_user_id?: string
+          status?: 'pending' | 'accepted' | 'declined'
+          created_at?: string
+          responded_at?: string | null
+        }
+      }
     }
-    Functions: Record<string, never>
+    Functions: {
+      find_user_by_email: {
+        Args: { lookup_email: string }
+        Returns: {
+          user_id: string
+          display_name: string
+          avatar_url: string | null
+          has_family: boolean
+        }[]
+      }
+      accept_family_invite: {
+        Args: { invite_id: string }
+        Returns: undefined
+      }
+    }
   }
 }
 
@@ -134,6 +177,13 @@ export type Family = Database['public']['Tables']['families']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']
 export type TaskCompletion = Database['public']['Tables']['task_completions']['Row']
+export type FamilyInvite = Database['public']['Tables']['family_invites']['Row']
+
+// Invite with joined details for display
+export type FamilyInviteWithDetails = FamilyInvite & {
+  families: Pick<Family, 'name'>
+  inviter: Pick<Profile, 'display_name' | 'avatar_url'>
+}
 
 // Extended types with relations
 export type TaskWithAssignee = Task & {
