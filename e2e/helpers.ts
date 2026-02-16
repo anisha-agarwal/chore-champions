@@ -1,13 +1,23 @@
 import { Page, expect } from '@playwright/test'
 
+interface CreateTestTaskOptions {
+  recurring?: 'daily' | 'weekly'
+  assignTo?: string  // Family member name to assign to (selects first match)
+}
+
 /**
  * Creates a test task via the UI
  */
 export async function createTestTask(
   page: Page,
   taskName: string,
-  recurring?: 'daily' | 'weekly'
+  optionsOrRecurring?: CreateTestTaskOptions | 'daily' | 'weekly'
 ) {
+  // Handle backwards compatibility: string means recurring
+  const options: CreateTestTaskOptions = typeof optionsOrRecurring === 'string'
+    ? { recurring: optionsOrRecurring }
+    : optionsOrRecurring || {}
+
   // Click FAB button to open form
   const fab = page.locator('button.fixed.bg-purple-600')
   await fab.click()
@@ -18,10 +28,16 @@ export async function createTestTask(
   // Fill in task name (using placeholder since label isn't associated)
   await page.getByPlaceholder(/clean your room/i).fill(taskName)
 
+  // If assignTo is specified, select from the "Assign To" dropdown
+  if (options.assignTo) {
+    const assignSelect = page.locator('select').nth(2) // Third select is "Assign To"
+    await assignSelect.selectOption({ label: options.assignTo })
+  }
+
   // If recurring is specified, select it from the Repeat dropdown
-  if (recurring) {
+  if (options.recurring) {
     const repeatSelect = page.locator('select').last()
-    await repeatSelect.selectOption(recurring)
+    await repeatSelect.selectOption(options.recurring)
   }
 
   // Submit the form
