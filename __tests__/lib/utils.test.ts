@@ -7,6 +7,11 @@ import {
   toDateString,
   getInitials,
   generateInviteCode,
+  combineDateAndTime,
+  formatTime,
+  getTimeRemaining,
+  formatTimeRemaining,
+  toTimeString,
 } from '@/lib/utils'
 
 describe('cn (classnames utility)', () => {
@@ -127,5 +132,167 @@ describe('generateInviteCode', () => {
       codes.add(generateInviteCode())
     }
     expect(codes.size).toBe(100)
+  })
+})
+
+describe('combineDateAndTime', () => {
+  it('combines date and time into a Date object', () => {
+    const result = combineDateAndTime('2024-01-15', '14:30:00')
+    expect(result.getFullYear()).toBe(2024)
+    expect(result.getMonth()).toBe(0) // January
+    expect(result.getDate()).toBe(15)
+    expect(result.getHours()).toBe(14)
+    expect(result.getMinutes()).toBe(30)
+    expect(result.getSeconds()).toBe(0)
+  })
+
+  it('handles midnight', () => {
+    const result = combineDateAndTime('2024-06-01', '00:00:00')
+    expect(result.getHours()).toBe(0)
+    expect(result.getMinutes()).toBe(0)
+  })
+
+  it('handles end of day', () => {
+    const result = combineDateAndTime('2024-06-01', '23:59:00')
+    expect(result.getHours()).toBe(23)
+    expect(result.getMinutes()).toBe(59)
+  })
+
+  it('handles time without seconds', () => {
+    const result = combineDateAndTime('2024-01-15', '14:30')
+    expect(result.getHours()).toBe(14)
+    expect(result.getMinutes()).toBe(30)
+  })
+})
+
+describe('formatTime', () => {
+  it('formats afternoon time', () => {
+    expect(formatTime('14:30:00')).toBe('2:30 PM')
+  })
+
+  it('formats morning time', () => {
+    expect(formatTime('09:15:00')).toBe('9:15 AM')
+  })
+
+  it('formats noon', () => {
+    expect(formatTime('12:00:00')).toBe('12:00 PM')
+  })
+
+  it('formats midnight', () => {
+    expect(formatTime('00:00:00')).toBe('12:00 AM')
+  })
+
+  it('formats 1 AM', () => {
+    expect(formatTime('01:00:00')).toBe('1:00 AM')
+  })
+
+  it('formats 11 PM', () => {
+    expect(formatTime('23:45:00')).toBe('11:45 PM')
+  })
+})
+
+describe('getTimeRemaining', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('returns positive time remaining for future deadline', () => {
+    jest.setSystemTime(new Date('2024-01-15T12:00:00'))
+    const deadline = new Date('2024-01-15T14:30:00')
+    const result = getTimeRemaining(deadline)
+
+    expect(result.isOverdue).toBe(false)
+    expect(result.isWarning).toBe(false)
+    expect(result.hours).toBe(2)
+    expect(result.minutes).toBe(30)
+    expect(result.totalMinutes).toBe(150)
+  })
+
+  it('returns warning when within 60 minutes', () => {
+    jest.setSystemTime(new Date('2024-01-15T13:45:00'))
+    const deadline = new Date('2024-01-15T14:30:00')
+    const result = getTimeRemaining(deadline)
+
+    expect(result.isOverdue).toBe(false)
+    expect(result.isWarning).toBe(true)
+    expect(result.hours).toBe(0)
+    expect(result.minutes).toBe(45)
+  })
+
+  it('returns warning at exactly 60 minutes', () => {
+    jest.setSystemTime(new Date('2024-01-15T13:30:00'))
+    const deadline = new Date('2024-01-15T14:30:00')
+    const result = getTimeRemaining(deadline)
+
+    expect(result.isOverdue).toBe(false)
+    expect(result.isWarning).toBe(true)
+    expect(result.totalMinutes).toBe(60)
+  })
+
+  it('returns overdue for past deadline', () => {
+    jest.setSystemTime(new Date('2024-01-15T15:30:00'))
+    const deadline = new Date('2024-01-15T14:30:00')
+    const result = getTimeRemaining(deadline)
+
+    expect(result.isOverdue).toBe(true)
+    expect(result.isWarning).toBe(false)
+    expect(result.hours).toBe(1)
+    expect(result.minutes).toBe(0)
+  })
+
+  it('returns overdue at zero remaining', () => {
+    jest.setSystemTime(new Date('2024-01-15T14:30:01'))
+    const deadline = new Date('2024-01-15T14:30:00')
+    const result = getTimeRemaining(deadline)
+
+    expect(result.isOverdue).toBe(true)
+  })
+})
+
+describe('formatTimeRemaining', () => {
+  it('formats hours and minutes remaining', () => {
+    expect(formatTimeRemaining({ hours: 2, minutes: 15, isOverdue: false })).toBe('2h 15m left')
+  })
+
+  it('formats minutes only remaining', () => {
+    expect(formatTimeRemaining({ hours: 0, minutes: 45, isOverdue: false })).toBe('45m left')
+  })
+
+  it('formats hours only remaining', () => {
+    expect(formatTimeRemaining({ hours: 3, minutes: 0, isOverdue: false })).toBe('3h left')
+  })
+
+  it('formats overdue with hours and minutes', () => {
+    expect(formatTimeRemaining({ hours: 1, minutes: 30, isOverdue: true })).toBe('1h 30m overdue')
+  })
+
+  it('formats overdue with minutes only', () => {
+    expect(formatTimeRemaining({ hours: 0, minutes: 15, isOverdue: true })).toBe('15m overdue')
+  })
+
+  it('formats zero time remaining', () => {
+    expect(formatTimeRemaining({ hours: 0, minutes: 0, isOverdue: false })).toBe('0m left')
+  })
+})
+
+describe('toTimeString', () => {
+  it('converts HH:MM to HH:MM:SS', () => {
+    expect(toTimeString('14:30')).toBe('14:30:00')
+  })
+
+  it('passes through HH:MM:SS unchanged', () => {
+    expect(toTimeString('14:30:00')).toBe('14:30:00')
+  })
+
+  it('converts midnight correctly', () => {
+    expect(toTimeString('00:00')).toBe('00:00:00')
+  })
+
+  it('converts end of day correctly', () => {
+    expect(toTimeString('23:59')).toBe('23:59:00')
   })
 })

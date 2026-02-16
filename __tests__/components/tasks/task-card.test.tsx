@@ -35,6 +35,7 @@ const mockTask: TaskWithAssignee = {
   time_of_day: 'morning',
   recurring: null,
   due_date: '2024-01-15',
+  due_time: null,
   completed: false,
   created_by: 'user-2',
   created_at: '2024-01-01T00:00:00Z',
@@ -210,6 +211,68 @@ describe('TaskCard', () => {
       // No avatar title should exist - check that neither nickname nor display_name appear as titles
       expect(screen.queryByTitle('Little T')).not.toBeInTheDocument()
       expect(screen.queryByTitle('Timmy')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Due Time', () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('shows no due time badge when task has no due_time', () => {
+      jest.setSystemTime(new Date('2024-01-15T12:00:00'))
+      render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+      expect(screen.queryByTestId('due-time-badge')).not.toBeInTheDocument()
+    })
+
+    it('shows due time badge when task has due_time', () => {
+      jest.setSystemTime(new Date('2024-01-15T12:00:00'))
+      const taskWithTime = { ...mockTask, due_time: '14:30:00' }
+      render(<TaskCard task={taskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      const badge = screen.getByTestId('due-time-badge')
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent('2:30 PM')
+    })
+
+    it('shows overdue state with red border', () => {
+      jest.setSystemTime(new Date('2024-01-15T16:00:00'))
+      const taskWithTime = { ...mockTask, due_time: '14:30:00' }
+      const { container } = render(<TaskCard task={taskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      const card = container.firstChild as HTMLElement
+      expect(card.className).toContain('border-red-400')
+    })
+
+    it('shows warning state with amber border when within 60 minutes', () => {
+      jest.setSystemTime(new Date('2024-01-15T14:00:00'))
+      const taskWithTime = { ...mockTask, due_time: '14:30:00' }
+      const { container } = render(<TaskCard task={taskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      const card = container.firstChild as HTMLElement
+      expect(card.className).toContain('border-amber-400')
+    })
+
+    it('shows half-points indicator when overdue', () => {
+      jest.setSystemTime(new Date('2024-01-15T16:00:00'))
+      const taskWithTime = { ...mockTask, due_time: '14:30:00', points: 10 }
+      render(<TaskCard task={taskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      expect(screen.getByTestId('half-points')).toHaveTextContent('5 pts')
+    })
+
+    it('does not show countdown for completed tasks', () => {
+      jest.setSystemTime(new Date('2024-01-15T16:00:00'))
+      const completedTaskWithTime = { ...mockTask, due_time: '14:30:00', completed: true }
+      const { container } = render(<TaskCard task={completedTaskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      // Completed task should not show countdown or half-points
+      expect(screen.queryByTestId('half-points')).not.toBeInTheDocument()
+      // Should still show the time badge (without countdown)
+      const badge = screen.getByTestId('due-time-badge')
+      expect(badge).toHaveTextContent('2:30 PM')
+      // Should not have red border
+      const card = container.firstChild as HTMLElement
+      expect(card.className).not.toContain('border-red-400')
     })
   })
 

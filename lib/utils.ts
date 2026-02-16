@@ -69,3 +69,66 @@ export function getInitials(name: string): string {
 export function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase()
 }
+
+// Combine a date string (YYYY-MM-DD) and time string (HH:MM:SS) into a Date
+export function combineDateAndTime(dateStr: string, timeStr: string): Date {
+  const [hours, minutes, seconds] = timeStr.split(':').map(Number)
+  const date = new Date(dateStr + 'T00:00:00')
+  date.setHours(hours, minutes, seconds || 0, 0)
+  return date
+}
+
+// Format a time string ("14:30:00") into 12-hour format ("2:30 PM")
+export function formatTime(timeStr: string): string {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`
+}
+
+// Calculate time remaining until a deadline
+export function getTimeRemaining(deadline: Date): {
+  totalMinutes: number
+  hours: number
+  minutes: number
+  isOverdue: boolean
+  isWarning: boolean
+} {
+  const now = new Date()
+  const diffMs = deadline.getTime() - now.getTime()
+  const totalMinutes = Math.floor(diffMs / 60000)
+  const isOverdue = totalMinutes < 0
+  const absTotalMinutes = Math.abs(totalMinutes)
+  const hours = Math.floor(absTotalMinutes / 60)
+  const minutes = absTotalMinutes % 60
+
+  return {
+    totalMinutes,
+    hours,
+    minutes,
+    isOverdue,
+    isWarning: !isOverdue && totalMinutes <= 60,
+  }
+}
+
+// Format time remaining into a human-readable string
+export function formatTimeRemaining(remaining: {
+  hours: number
+  minutes: number
+  isOverdue: boolean
+}): string {
+  const { hours, minutes, isOverdue } = remaining
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`)
+  const timeStr = parts.join(' ')
+  return isOverdue ? `${timeStr} overdue` : `${timeStr} left`
+}
+
+// Convert HTML time input value ("HH:MM") to database format ("HH:MM:SS")
+export function toTimeString(timeInput: string): string {
+  if (timeInput.split(':').length === 2) {
+    return `${timeInput}:00`
+  }
+  return timeInput
+}

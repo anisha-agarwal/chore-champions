@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useMemo } from 'react'
+import { cn, combineDateAndTime, formatTime, getTimeRemaining, formatTimeRemaining, toDateString } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
 
@@ -12,9 +12,64 @@ interface TaskCardProps {
   onEdit: (task: TaskWithAssignee) => void
   onDelete: (task: TaskWithAssignee) => void
   currentUser: Profile | null
+  selectedDate?: Date
 }
 
-export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, currentUser }: TaskCardProps) {
+type DeadlineStatus = {
+  isOverdue: boolean
+  isWarning: boolean
+  hours: number
+  minutes: number
+} | null
+
+function computeDeadlineStatus(
+  dueTime: string | null | undefined,
+  dueDate: string | null | undefined,
+  recurring: string | null | undefined,
+  isCompleted: boolean,
+  selectedDate?: Date
+): DeadlineStatus {
+  if (!dueTime || isCompleted) return null
+
+  const dateStr = recurring && selectedDate ? toDateString(selectedDate) : dueDate
+  if (!dateStr) return null
+
+  const deadline = combineDateAndTime(dateStr, dueTime)
+  const remaining = getTimeRemaining(deadline)
+  return {
+    isOverdue: remaining.isOverdue,
+    isWarning: remaining.isWarning,
+    hours: remaining.hours,
+    minutes: remaining.minutes,
+  }
+}
+
+// Hook to track deadline status with 60-second updates
+function useDeadlineStatus(task: TaskWithAssignee, isCompleted: boolean, selectedDate?: Date) {
+  // Track a tick counter to force re-computation every 60 seconds
+  const [tick, setTick] = useState(0)
+
+  // Recompute whenever task props change OR tick increments (every 60s)
+  const currentStatus = useMemo(
+    () => computeDeadlineStatus(task.due_time, task.due_date, task.recurring, isCompleted, selectedDate),
+    [task.due_time, task.due_date, task.recurring, isCompleted, selectedDate, tick]
+  )
+
+  useEffect(() => {
+    // Only set up interval when there is an active deadline to track
+    if (!task.due_time || isCompleted) return
+
+    const dateStr = task.recurring && selectedDate ? toDateString(selectedDate) : task.due_date
+    if (!dateStr) return
+
+    const interval = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(interval)
+  }, [task.due_time, task.due_date, task.recurring, isCompleted, selectedDate])
+
+  return currentStatus
+}
+
+export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, currentUser, selectedDate }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isUncompleting, setIsUncompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
@@ -27,6 +82,8 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
   useEffect(() => {
     setIsCompleted(task.completed)
   }, [task.completed])
+
+  const deadlineStatus = useDeadlineStatus(task, isCompleted, selectedDate)
 
   async function handleComplete() {
     if (isCompleted || isCompleting) return
@@ -73,10 +130,20 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
 
   const timeInfo = timeLabels[task.time_of_day] || timeLabels.anytime
 
+  // Determine border color based on deadline status
+  const borderClass = !isCompleted && deadlineStatus
+    ? deadlineStatus.isOverdue
+      ? 'border-red-400'
+      : deadlineStatus.isWarning
+        ? 'border-amber-400'
+        : 'border-gray-100'
+    : 'border-gray-100'
+
   return (
     <div
       className={cn(
-        'bg-white rounded-xl p-4 shadow-sm border border-gray-100 transition-all',
+        'bg-white rounded-xl p-4 shadow-sm border transition-all',
+        borderClass,
         isCompleted && 'opacity-60'
       )}
     >
@@ -126,12 +193,50 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
               {timeInfo.label}
             </span>
 
-            <span className="flex items-center gap-1 text-sm text-yellow-600 font-medium">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-              </svg>
-              {task.points} pts
-            </span>
+            {/* Due time badge with countdown */}
+            {task.due_time && !isCompleted && deadlineStatus && (
+              <span
+                data-testid="due-time-badge"
+                className={cn(
+                  'px-2 py-0.5 rounded-full text-xs font-medium',
+                  deadlineStatus.isOverdue
+                    ? 'bg-red-100 text-red-700'
+                    : deadlineStatus.isWarning
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-sky-100 text-sky-700'
+                )}
+              >
+                {formatTime(task.due_time)} ({formatTimeRemaining(deadlineStatus)})
+              </span>
+            )}
+
+            {/* Show just the time for completed tasks with due_time */}
+            {task.due_time && isCompleted && (
+              <span
+                data-testid="due-time-badge"
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-700"
+              >
+                {formatTime(task.due_time)}
+              </span>
+            )}
+
+            {/* Points display: show half-points indicator when overdue */}
+            {!isCompleted && deadlineStatus?.isOverdue ? (
+              <span className="flex items-center gap-1 text-sm font-medium">
+                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                </svg>
+                <span className="line-through text-gray-400">{task.points}</span>
+                <span className="text-red-600" data-testid="half-points">{Math.floor(task.points / 2)} pts</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-sm text-yellow-600 font-medium">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                </svg>
+                {task.points} pts
+              </span>
+            )}
 
             {task.recurring && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">

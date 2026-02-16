@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { toDateString } from '@/lib/utils'
+import { toDateString, toTimeString } from '@/lib/utils'
 import { TIME_OF_DAY_OPTIONS, type Profile, type TaskWithAssignee } from '@/lib/types'
 
 interface TaskFormProps {
@@ -17,6 +17,7 @@ interface TaskFormProps {
     recurring: string | null
     assigned_to: string | null
     due_date: string | null
+    due_time: string | null
   }, taskId?: string) => Promise<void>
   familyMembers: Profile[]
   selectedDate: Date
@@ -30,6 +31,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
   const [timeOfDay, setTimeOfDay] = useState('anytime')
   const [recurring, setRecurring] = useState<string | null>(null)
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
+  const [dueTime, setDueTime] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,6 +46,8 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
       setTimeOfDay(task.time_of_day)
       setRecurring(task.recurring)
       setAssignedTo(task.assigned_to)
+      // Pre-populate due time (stored as HH:MM:SS, input needs HH:MM)
+      setDueTime(task.due_time ? task.due_time.slice(0, 5) : null)
     } else {
       // Reset form for create mode
       setTitle('')
@@ -52,6 +56,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
       setTimeOfDay('anytime')
       setRecurring(null)
       setAssignedTo(null)
+      setDueTime(null)
     }
   }, [task])
 
@@ -71,6 +76,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
         recurring,
         assigned_to: assignedTo,
         due_date: toDateString(selectedDate),
+        due_time: dueTime ? toTimeString(dueTime) : null,
       }, task?.id)
 
       // Reset form only on create
@@ -81,6 +87,7 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
         setTimeOfDay('anytime')
         setRecurring(null)
         setAssignedTo(null)
+        setDueTime(null)
       }
       onClose()
     } catch (err) {
@@ -179,6 +186,19 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label htmlFor="due-time-input" className="block text-sm font-medium text-gray-700 mb-1">
+            Due Time (optional)
+          </label>
+          <input
+            id="due-time-input"
+            type="time"
+            value={dueTime || ''}
+            onChange={(e) => setDueTime(e.target.value || null)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+          />
         </div>
 
         <div>

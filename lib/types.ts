@@ -65,6 +65,7 @@ export type Database = {
           time_of_day: 'morning' | 'afternoon' | 'night' | 'anytime'
           recurring: 'daily' | 'weekly' | null
           due_date: string | null
+          due_time: string | null
           completed: boolean
           created_by: string | null
           created_at: string
@@ -79,6 +80,7 @@ export type Database = {
           time_of_day?: 'morning' | 'afternoon' | 'night' | 'anytime'
           recurring?: 'daily' | 'weekly' | null
           due_date?: string | null
+          due_time?: string | null
           completed?: boolean
           created_by?: string | null
           created_at?: string
@@ -93,6 +95,7 @@ export type Database = {
           time_of_day?: 'morning' | 'afternoon' | 'night' | 'anytime'
           recurring?: 'daily' | 'weekly' | null
           due_date?: string | null
+          due_time?: string | null
           completed?: boolean
           created_by?: string | null
           created_at?: string

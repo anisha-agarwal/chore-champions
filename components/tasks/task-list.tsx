@@ -12,9 +12,10 @@ interface TaskListProps {
   currentUser: Profile | null
   emptyMessage?: string
   dateKey?: string
+  selectedDate?: Date
 }
 
-export function TaskList({ tasks, onComplete, onUncomplete, onEdit, onDelete, currentUser, emptyMessage = 'No quests found', dateKey }: TaskListProps) {
+export function TaskList({ tasks, onComplete, onUncomplete, onEdit, onDelete, currentUser, emptyMessage = 'No quests found', dateKey, selectedDate }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <div className="text-center py-12">
@@ -31,7 +32,7 @@ export function TaskList({ tasks, onComplete, onUncomplete, onEdit, onDelete, cu
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <TaskCard key={`${task.id}-${dateKey || ''}`} task={task} onComplete={onComplete} onUncomplete={onUncomplete} onEdit={onEdit} onDelete={onDelete} currentUser={currentUser} />
+        <TaskCard key={`${task.id}-${dateKey || ''}`} task={task} onComplete={onComplete} onUncomplete={onUncomplete} onEdit={onEdit} onDelete={onDelete} currentUser={currentUser} selectedDate={selectedDate} />
       ))}
     </div>
   )
