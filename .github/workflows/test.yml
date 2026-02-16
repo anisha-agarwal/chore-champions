@@ -105,6 +105,8 @@ jobs:
           TEST_PARENT_PASSWORD: ${{ secrets.TEST_PARENT_PASSWORD }}
           TEST_CHILD_EMAIL: ${{ secrets.TEST_CHILD_EMAIL }}
           TEST_CHILD_PASSWORD: ${{ secrets.TEST_CHILD_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
