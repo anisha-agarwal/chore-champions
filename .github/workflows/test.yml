@@ -43,13 +43,14 @@ jobs:
         run: npm ci
 
       - name: Run unit tests with coverage
-        run: npm run test:coverage
+        run: npm run test:coverage | tee ./coverage.txt && exit ${PIPESTATUS[0]}
 
       - name: Post coverage comment
         if: github.event_name == 'pull_request'
         uses: MishaKav/jest-coverage-comment@main
         with:
           coverage-summary-path: coverage/coverage-summary.json
+          coverage-path: ./coverage.txt
 
   smoke-tests:
     runs-on: ubuntu-latest
