@@ -290,7 +290,3 @@ chore-champions/
 2. Follow the [ADR process](docs/adr/) for architectural decisions
 3. Ensure all tests pass (`npm test && npm run test:e2e`)
 4. Create a PR with clear description
-
-## License
-
-MIT
