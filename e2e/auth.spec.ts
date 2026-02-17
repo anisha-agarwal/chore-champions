@@ -58,8 +58,7 @@ test.describe('Login Page', () => {
     await expect(page).toHaveURL('/signup')
   })
 
-  // Skip in CI - requires real Supabase connection to test auth errors
-  test.skip('shows error with invalid credentials', async ({ page }) => {
+  test('shows error with invalid credentials', async ({ page }) => {
     await page.goto('/login')
 
     await page.getByLabel(/email/i).fill('invalid@test.com')
@@ -67,7 +66,23 @@ test.describe('Login Page', () => {
     await page.getByRole('button', { name: /sign in/i }).click()
 
     // Should show an error message
-    await expect(page.getByText(/invalid|error|incorrect/i)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/invalid|error|incorrect/i)).toBeVisible({ timeout: 10000 })
+  })
+
+  test('login with valid credentials redirects to /quests', async ({ page }) => {
+    await page.goto('/login')
+
+    // Use the test parent credentials
+    const email = process.env.TEST_PARENT_EMAIL || 'e2e-parent@chore-champions-test.local'
+    const password = process.env.TEST_PARENT_PASSWORD || 'TestPassword123!'
+
+    await page.getByLabel(/email/i).fill(email)
+    await page.getByLabel(/password/i).fill(password)
+    await page.getByRole('button', { name: /sign in/i }).click()
+
+    // Should redirect to quests page after login
+    await expect(page).toHaveURL(/\/quests/, { timeout: 15000 })
+    await expect(page.getByRole('heading', { name: 'Quests' })).toBeVisible()
   })
 })
 

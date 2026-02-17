@@ -276,6 +276,43 @@ describe('TaskCard', () => {
     })
   })
 
+  describe('Complete Error Handling', () => {
+    it('does not set completed state when onComplete throws', async () => {
+      const handleComplete = jest.fn().mockRejectedValue(new Error('Network error'))
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      // Task should not show completed state
+      expect(screen.getByText('Clean your room')).not.toHaveClass('line-through')
+      consoleSpy.mockRestore()
+    })
+
+    it('does not set uncompleted state when onUncomplete throws', async () => {
+      const completedTask = { ...mockTask, completed: true }
+      const handleUncomplete = jest.fn().mockRejectedValue(new Error('Network error'))
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={handleUncomplete} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      // Task should still show completed state
+      expect(screen.getByText('Clean your room')).toHaveClass('line-through')
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Weekly Recurring', () => {
+    it('renders weekly badge', () => {
+      const weeklyTask = { ...mockTask, recurring: 'weekly' as const }
+      render(<TaskCard task={weeklyTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+      expect(screen.getByText('Weekly')).toBeInTheDocument()
+    })
+  })
+
   describe('Edit Button', () => {
     it('renders edit button for incomplete tasks', () => {
       render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)

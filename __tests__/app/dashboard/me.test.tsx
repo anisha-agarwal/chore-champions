@@ -292,4 +292,142 @@ describe('Me Page', () => {
 
     expect(screen.getByText('Tap to change avatar')).toBeInTheDocument()
   })
+
+  it('calls signOut and redirects when Sign Out is clicked', async () => {
+    mockSignOut.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Sign Out' }))
+
+    expect(mockSignOut).toHaveBeenCalled()
+    expect(mockPush).toHaveBeenCalledWith('/login')
+  })
+
+  it('shows password mismatch error', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    // Open password modal
+    await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+    // Fill in mismatched passwords
+    await user.type(screen.getByLabelText('New Password'), 'password123')
+    await user.type(screen.getByLabelText('Confirm Password'), 'different123')
+
+    await user.click(screen.getByRole('button', { name: 'Update Password' }))
+
+    expect(screen.getByText('Passwords do not match.')).toBeInTheDocument()
+  })
+
+  it('shows password too short error', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+    await user.type(screen.getByLabelText('New Password'), 'abc')
+    await user.type(screen.getByLabelText('Confirm Password'), 'abc')
+
+    await user.click(screen.getByRole('button', { name: 'Update Password' }))
+
+    expect(screen.getByText('Password must be at least 6 characters.')).toBeInTheDocument()
+  })
+
+  it('shows success on password change', async () => {
+    mockUpdateUser.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+    await user.type(screen.getByLabelText('New Password'), 'newpassword123')
+    await user.type(screen.getByLabelText('Confirm Password'), 'newpassword123')
+
+    await user.click(screen.getByRole('button', { name: 'Update Password' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Password updated successfully!')).toBeInTheDocument()
+    })
+  })
+
+  it('shows error from supabase on password change failure', async () => {
+    mockUpdateUser.mockResolvedValue({ error: { message: 'Password too weak' } })
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+    await user.type(screen.getByLabelText('New Password'), 'newpassword123')
+    await user.type(screen.getByLabelText('Confirm Password'), 'newpassword123')
+
+    await user.click(screen.getByRole('button', { name: 'Update Password' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Password too weak')).toBeInTheDocument()
+    })
+  })
+
+  it('renders avatar selection grid when avatar modal is open', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+
+    // Should show avatar options
+    expect(screen.getByText('Panther')).toBeInTheDocument()
+    expect(screen.getByText('Fox')).toBeInTheDocument()
+    expect(screen.getByText('Bear')).toBeInTheDocument()
+  })
+
+  it('shows Profile not found when no profile exists', async () => {
+    mockSupabaseData.profile = null
+
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Profile not found')).toBeInTheDocument()
+    })
+  })
+
+  it('allows typing in display name input', async () => {
+    const user = userEvent.setup()
+    render(<MePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    // The display name input should be editable (not readonly)
+    const displayNameInput = screen.getByDisplayValue('Test User')
+    expect(displayNameInput).not.toHaveAttribute('readOnly')
+
+    // Verify it is an input that can be interacted with
+    await user.click(displayNameInput)
+    expect(document.activeElement).toBe(displayNameInput)
+  })
 })

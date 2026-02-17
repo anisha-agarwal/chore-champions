@@ -38,7 +38,17 @@ export default defineConfig({
         storageState: '.auth/parent.json',
       },
       dependencies: ['setup'],
-      testMatch: /quests\.spec\.ts|me\.spec\.ts|family\.spec\.ts|family-invite\.spec\.ts|rewards\.spec\.ts/,
+      testMatch: /quests\.spec\.ts|me\.spec\.ts|family\.spec\.ts|family-invite\.spec\.ts|rewards\.spec\.ts|dashboard-nav\.spec\.ts|profile-actions\.spec\.ts/,
+    },
+    // Destructive parent tests (sign-out) that invalidate the session - run last
+    {
+      name: 'parent-destructive',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/parent.json',
+      },
+      dependencies: ['parent'],
+      testMatch: /sign-out\.spec\.ts/,
     },
     // Tests that require child auth
     {

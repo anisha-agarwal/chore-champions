@@ -1,0 +1,159 @@
+import { render, screen, waitFor } from '@testing-library/react'
+import RewardsPage from '@/app/(dashboard)/rewards/page'
+
+// Mock next/image
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: (props: { alt: string; src: string }) => <img alt={props.alt} src={props.src} />,
+}))
+
+// Mock data
+const mockUser = { id: 'user-1', email: 'test@example.com' }
+const mockProfile = {
+  id: 'user-1',
+  family_id: 'family-1',
+  display_name: 'Test User',
+  avatar_url: null,
+  nickname: null,
+  role: 'parent',
+  points: 150,
+  created_at: '2024-01-01T00:00:00Z',
+}
+
+const mockMembers = [
+  { ...mockProfile, points: 150 },
+  {
+    id: 'child-1',
+    family_id: 'family-1',
+    display_name: 'Timmy',
+    avatar_url: null,
+    nickname: 'Little T',
+    role: 'child',
+    points: 100,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'child-2',
+    family_id: 'family-1',
+    display_name: 'Sally',
+    avatar_url: null,
+    nickname: null,
+    role: 'child',
+    points: 75,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+]
+
+// Supabase mock
+const mockGetUser = jest.fn()
+const mockProfileData = { current: mockProfile as unknown }
+const mockMembersData = { current: mockMembers as unknown[] }
+
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    auth: {
+      getUser: () => mockGetUser(),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: mockProfileData.current }),
+          order: () => Promise.resolve({ data: mockMembersData.current }),
+        }),
+      }),
+    }),
+  }),
+}))
+
+describe('RewardsPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetUser.mockResolvedValue({ data: { user: mockUser } })
+    mockProfileData.current = mockProfile
+    mockMembersData.current = mockMembers
+  })
+
+  it('shows loading state initially', () => {
+    mockGetUser.mockReturnValue(new Promise(() => {}))
+    render(<RewardsPage />)
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+  })
+
+  it('renders page header', async () => {
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Rewards' })).toBeInTheDocument()
+      expect(screen.getByText('Family leaderboard')).toBeInTheDocument()
+    })
+  })
+
+  it('renders podium with top 3 members', async () => {
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByText('150 pts')).toBeInTheDocument()
+      expect(screen.getByText('100 pts')).toBeInTheDocument()
+      expect(screen.getByText('75 pts')).toBeInTheDocument()
+    })
+  })
+
+  it('renders member names on podium', async () => {
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByText('Test')).toBeInTheDocument()   // First name of "Test User"
+      expect(screen.getByText('Little T')).toBeInTheDocument()
+      expect(screen.getByText('Sally')).toBeInTheDocument()
+    })
+  })
+
+  it('renders Available Rewards section', async () => {
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Available Rewards' })).toBeInTheDocument()
+      expect(screen.getByText('Coming Soon!')).toBeInTheDocument()
+    })
+  })
+
+  it('shows no-family state when user has no family', async () => {
+    mockProfileData.current = { ...mockProfile, family_id: null }
+
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByText('No Family Yet')).toBeInTheDocument()
+      expect(screen.getByText(/join a family to see the leaderboard/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows Set Up Family link in no-family state', async () => {
+    mockProfileData.current = { ...mockProfile, family_id: null }
+
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Set Up Family' })).toBeInTheDocument()
+    })
+  })
+
+  it('renders 4th+ members in a list below podium', async () => {
+    const fourMembers = [
+      ...mockMembers,
+      {
+        id: 'child-3',
+        family_id: 'family-1',
+        display_name: 'Bob',
+        avatar_url: null,
+        nickname: null,
+        role: 'child',
+        points: 25,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ]
+    mockMembersData.current = fourMembers
+
+    render(<RewardsPage />)
+    await waitFor(() => {
+      expect(screen.getByText('Bob')).toBeInTheDocument()
+      expect(screen.getByText('25 pts')).toBeInTheDocument()
+      // 4th place indicator
+      expect(screen.getByText('4')).toBeInTheDocument()
+    })
+  })
+})

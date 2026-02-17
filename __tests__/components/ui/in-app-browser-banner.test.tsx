@@ -45,4 +45,32 @@ describe('InAppBrowserBanner', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('shows banner in Twitter in-app browser', () => {
+    setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Twitter for iPhone')
+    render(<InAppBrowserBanner />)
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('shows banner in LinkedIn in-app browser', () => {
+    setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) LinkedInApp')
+    render(<InAppBrowserBanner />)
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('shows banner in Line in-app browser', () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 13) Line/12.0')
+    render(<InAppBrowserBanner />)
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('does not show banner in Safari', () => {
+    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/16.0 Safari/605.1.15')
+    render(<InAppBrowserBanner />)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
