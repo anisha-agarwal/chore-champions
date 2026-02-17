@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { RoleSelector, type Role } from '@/components/ui/role-selector'
+import { InAppBrowserBanner } from '@/components/ui/in-app-browser-banner'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -84,6 +85,8 @@ export default function SignupPage() {
           <h1 className="text-3xl font-bold text-gray-900">Chore Champions</h1>
           <p className="text-gray-600 mt-2">Join the family adventure!</p>
         </div>
+
+        <InAppBrowserBanner />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

@@ -125,6 +125,22 @@ export function formatTimeRemaining(remaining: {
   return isOverdue ? `${timeStr} overdue` : `${timeStr} left`
 }
 
+// Detect in-app browsers that block Google OAuth
+export function isInAppBrowser(userAgent: string): boolean {
+  const patterns = [
+    'FBAN', 'FBAV',       // Facebook
+    'Instagram',           // Instagram
+    'WhatsApp',            // WhatsApp
+    'Line/',               // Line
+    'Twitter',             // Twitter / X
+    'LinkedInApp',         // LinkedIn
+    'Snapchat',            // Snapchat
+    'Pinterest',           // Pinterest
+    'MicroMessenger',      // WeChat
+  ]
+  return patterns.some((p) => userAgent.includes(p))
+}
+
 // Convert HTML time input value ("HH:MM") to database format ("HH:MM:SS")
 export function toTimeString(timeInput: string): string {
   if (timeInput.split(':').length === 2) {

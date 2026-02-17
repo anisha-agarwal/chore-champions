@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { InAppBrowserBanner } from '@/components/ui/in-app-browser-banner'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -75,6 +76,8 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900">Chore Champions</h1>
           <p className="text-gray-600 mt-2">Welcome back, champion!</p>
         </div>
+
+        <InAppBrowserBanner />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

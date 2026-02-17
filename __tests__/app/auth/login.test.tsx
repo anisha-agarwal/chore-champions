@@ -2,6 +2,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import LoginPage from '@/app/(auth)/login/page'
 
+// Mock InAppBrowserBanner
+jest.mock('@/components/ui/in-app-browser-banner', () => ({
+  InAppBrowserBanner: () => null,
+}))
+
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
