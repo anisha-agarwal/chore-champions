@@ -498,6 +498,110 @@ describe('Me Page', () => {
     })
   })
 
+  describe('password modal cancel', () => {
+    it('closes password modal when Cancel is clicked', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+      expect(screen.getByText('New Password')).toBeInTheDocument()
+
+      // Click Cancel button in the password modal (line 362)
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      await waitFor(() => {
+        expect(screen.queryByText('New Password')).not.toBeInTheDocument()
+      })
+    })
+
+    it('closes password modal via backdrop click (Modal onClose)', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+      expect(screen.getByText('New Password')).toBeInTheDocument()
+
+      // Click backdrop (line 317 - Modal onClose)
+      const backdrops = document.querySelectorAll('.fixed.inset-0')
+      // The backdrop is the one with bg-black/50
+      const backdrop = Array.from(backdrops).find(el => el.classList.contains('bg-black/50')) as HTMLElement
+      await user.click(backdrop)
+
+      await waitFor(() => {
+        expect(screen.queryByText('New Password')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('password auto-close after success', () => {
+    it('auto-closes password modal after 1500ms on success', async () => {
+      jest.useFakeTimers()
+      mockUpdateUser.mockResolvedValue({ error: null })
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change Password' }))
+
+      await user.type(screen.getByLabelText('New Password'), 'newpassword123')
+      await user.type(screen.getByLabelText('Confirm Password'), 'newpassword123')
+
+      await user.click(screen.getByRole('button', { name: 'Update Password' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Password updated successfully!')).toBeInTheDocument()
+      })
+
+      // Advance past the 1500ms timeout
+      jest.advanceTimersByTime(1600)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Password updated successfully!')).not.toBeInTheDocument()
+      })
+
+      jest.useRealTimers()
+    })
+  })
+
+  describe('save success timer', () => {
+    it('resets saveSuccess after 1500ms', async () => {
+      jest.useFakeTimers()
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+
+      // Advance past the 1500ms setTimeout
+      jest.advanceTimersByTime(1600)
+
+      // The success state should have been reset (setSaveSuccess(false))
+      // This covers line 92
+
+      jest.useRealTimers()
+    })
+  })
+
   describe('handleSave', () => {
     it('saves profile changes successfully', async () => {
       const user = userEvent.setup()

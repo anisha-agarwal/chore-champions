@@ -272,6 +272,29 @@ describe('InviteModal', () => {
 
       expect(onClose).toHaveBeenCalled()
     })
+
+    it('handleClose resets active tab to code', async () => {
+      const onClose = jest.fn()
+      const user = userEvent.setup()
+      const { rerender } = render(<InviteModal {...defaultProps} onClose={onClose} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Click the modal's X close button which calls handleClose
+      // The X button is inside the modal header
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      expect(onClose).toHaveBeenCalled()
+
+      // Re-render with isOpen=true to verify tab was reset to 'code'
+      rerender(<InviteModal {...defaultProps} isOpen={true} onClose={onClose} />)
+
+      // The Share Code tab should be active again (setActiveTab('code') was called in handleClose)
+      expect(screen.getByRole('tab', { name: 'Share Code' })).toHaveAttribute('aria-selected', 'true')
+    })
   })
 
   describe('tab aria attributes', () => {

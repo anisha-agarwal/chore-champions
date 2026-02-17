@@ -153,6 +153,44 @@ describe('PendingInvites', () => {
     })
   })
 
+  it('shows error when fetch fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+    // Setup select mock to return error
+    const orderFn = jest.fn().mockResolvedValue({ data: null, error: { message: 'Fetch failed' } })
+    const eqStatusFn = jest.fn().mockReturnValue({ order: orderFn })
+    const eqUserFn = jest.fn().mockReturnValue({ eq: eqStatusFn })
+    mockSelect.mockReturnValue({ eq: eqUserFn })
+
+    render(
+      <PendingInvites userId="user-1" onAccepted={mockOnAccepted} />
+    )
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch invites:', expect.objectContaining({ message: 'Fetch failed' }))
+    })
+    consoleSpy.mockRestore()
+  })
+
+  it('shows error when decline fails', async () => {
+    setupSelectMock(mockInvites)
+    const eqFn = jest.fn().mockResolvedValue({ error: { message: 'Decline failed' } })
+    mockUpdate.mockReturnValue({ eq: eqFn })
+
+    render(
+      <PendingInvites userId="user-1" onAccepted={mockOnAccepted} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('The Smiths')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Decline' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to decline invite. Please try again.')).toBeInTheDocument()
+    })
+  })
+
   it('shows error message on RPC failure', async () => {
     setupSelectMock(mockInvites)
     mockRpc.mockResolvedValue({ error: { message: 'Something went wrong' } })

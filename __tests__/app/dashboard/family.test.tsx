@@ -386,6 +386,70 @@ describe('FamilyPage', () => {
     })
   })
 
+  describe('remove parent member', () => {
+    it('sets memberToRemove for a parent member (line 232)', async () => {
+      // Add another parent so the remove button shows in the Parents section
+      mockMembersData.current = [
+        mockProfile,
+        {
+          id: 'parent-2',
+          family_id: 'family-1',
+          display_name: 'Other Parent',
+          avatar_url: null,
+          nickname: null,
+          role: 'parent',
+          points: 75,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'child-1',
+          family_id: 'family-1',
+          display_name: 'Timmy Smith',
+          avatar_url: null,
+          nickname: 'Little T',
+          role: 'child',
+          points: 50,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Other Parent')).toBeInTheDocument()
+      })
+
+      // There should be two remove buttons now (one for Other Parent, one for child)
+      const removeButtons = screen.getAllByTitle('Remove member')
+      expect(removeButtons.length).toBeGreaterThanOrEqual(2)
+
+      // Click the first remove button (for Other Parent in Parents section)
+      await user.click(removeButtons[0])
+
+      expect(screen.getByRole('heading', { name: /remove family member/i })).toBeInTheDocument()
+      expect(screen.getByText(/are you sure you want to remove/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('invite modal', () => {
+    it('opens invite modal when Invite button is clicked', async () => {
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Invite' }))
+
+      // InviteModal should open (it renders with isOpen=true)
+      await waitFor(() => {
+        expect(screen.getByText('Invite Family Member')).toBeInTheDocument()
+      })
+    })
+  })
+
   describe('role-based rendering', () => {
     it('child user does not see Invite button', async () => {
       mockProfileData.current = { ...mockProfile, id: 'child-1', role: 'child' }

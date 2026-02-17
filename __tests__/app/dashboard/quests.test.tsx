@@ -85,10 +85,15 @@ jest.mock('@/lib/supabase/client', () => ({
       if (table === 'profiles') {
         return {
           select: () => ({
-            eq: () => ({
-              single: () => Promise.resolve({ data: mockProfileData.current }),
-              order: () => Promise.resolve({ data: mockMembersData.current }),
-            }),
+            eq: () => {
+              // Return a thenable that also has .single() and .order()
+              // This handles both: `await .eq()` (members) and `.eq().single()` (profile)
+              const membersPromise = Promise.resolve({ data: mockMembersData.current })
+              return Object.assign(membersPromise, {
+                single: () => Promise.resolve({ data: mockProfileData.current }),
+                order: () => Promise.resolve({ data: mockMembersData.current }),
+              })
+            },
           }),
         }
       }
@@ -514,6 +519,54 @@ describe('QuestsPage', () => {
     })
   })
 
+  describe('delete modal close/cancel', () => {
+    it('closes non-recurring delete modal via Cancel button', async () => {
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Open delete modal for non-recurring task
+      await user.click(screen.getByTitle('Delete quest'))
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /delete quest/i })).toBeInTheDocument()
+      })
+
+      // Click Cancel
+      await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /delete quest/i })).not.toBeInTheDocument()
+      })
+    })
+
+    it('closes delete modal via backdrop click (Modal onClose)', async () => {
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTitle('Delete quest'))
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /delete quest/i })).toBeInTheDocument()
+      })
+
+      // Close via clicking the backdrop (the div with bg-black/50 class)
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /delete quest/i })).not.toBeInTheDocument()
+      })
+    })
+  })
+
   describe('handleConfirmDelete', () => {
     it('deletes a non-recurring task successfully', async () => {
       const user = userEvent.setup()
@@ -761,8 +814,39 @@ describe('QuestsPage', () => {
     })
   })
 
-  describe('task filtering', () => {
-    it('filters tasks by member', async () => {
+  describe('recurring task filtering', () => {
+    it('returns false for unknown recurring types (e.g. monthly)', async () => {
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-monthly',
+          family_id: 'family-1',
+          title: 'Monthly Unknown',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'monthly',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+      // Monthly task should be filtered out since it's an unknown recurring type
+      expect(screen.queryByText('Monthly Unknown')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('handleSubmitTask update path', () => {
+    it('updates an existing task when editing', async () => {
       const user = userEvent.setup()
       render(<QuestsPage />)
 
@@ -770,12 +854,214 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
       })
 
-      // The member filter should be rendered with member names
-      const timmyFilter = screen.queryByText('Little T')
-      if (timmyFilter) {
-        await user.click(timmyFilter)
+      // Click the edit button to open editing form
+      const editButton = screen.getByTitle('Edit quest')
+      await user.click(editButton)
+
+      // Should show the edit form
+      await waitFor(() => {
+        expect(screen.getByText('Edit Quest')).toBeInTheDocument()
+      })
+
+      // Submit the form (the title is pre-populated)
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('handleUncompleteTask for recurring task', () => {
+    it('uncompletes a recurring task (deletes completion with date match)', async () => {
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-unc',
+          family_id: 'family-1',
+          title: 'Recurring Done',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+      mockCompletionsData.current = [{ task_id: 'rec-unc' }]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recurring Done')).toBeInTheDocument()
+      })
+
+      // The task should be marked completed, click undo
+      const undoButton = screen.getByTitle('Click to undo')
+      await user.click(undoButton)
+
+      await waitFor(() => {
+        expect(mockDelete).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('isTaskOverdue', () => {
+    it('completes a recurring task with due_time (exercises recurring branch)', async () => {
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-overdue',
+          family_id: 'family-1',
+          title: 'Overdue Recurring',
+          description: null,
+          assigned_to: 'child-1',
+          points: 10,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: '00:01:00',
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('Overdue Recurring')).toBeInTheDocument()
+      })
+
+      // Click the checkbox to complete (this calls handleCompleteTask which calls isTaskOverdue)
+      const taskCard = screen.getByText('Overdue Recurring').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockInsert).toHaveBeenCalled()
+      })
+    })
+
+    it('completes a non-recurring task with due_time (exercises non-recurring branch)', async () => {
+      mockOneTimeTasksData.current = [
+        {
+          ...mockTasks[0],
+          due_time: '00:01:00',
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+      await waitFor(() => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
-      }
+      })
+
+      // Click the checkbox to complete
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+        expect(mockInsert).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('task filtering', () => {
+    it('filters tasks by all-kids member selection', async () => {
+      // Add a task assigned to the parent (should be filtered out with all-kids)
+      mockOneTimeTasksData.current = [
+        ...mockTasks,
+        {
+          id: 'task-parent',
+          family_id: 'family-1',
+          title: 'Parent Task',
+          description: null,
+          assigned_to: 'user-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: null,
+          due_date: '2024-01-15',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'user-1', display_name: 'Test Parent', avatar_url: null, nickname: null },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+        expect(screen.getByText('Parent Task')).toBeInTheDocument()
+      })
+
+      // Click on "All kids" filter - rendered by MemberFilter
+      const allKidsFilter = screen.getByText('All kids')
+      await user.click(allKidsFilter)
+      await waitFor(() => {
+        // Clean Room is assigned to child-1, should still show
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+        // Parent Task is assigned to user-1 (parent), should be filtered out
+        expect(screen.queryByText('Parent Task')).not.toBeInTheDocument()
+      })
+    })
+
+    it('filters tasks by specific member and hides non-matching tasks', async () => {
+      // Add a second task assigned to the parent so it gets filtered out
+      mockOneTimeTasksData.current = [
+        ...mockTasks,
+        {
+          id: 'task-parent-2',
+          family_id: 'family-1',
+          title: 'Parent Only Task',
+          description: null,
+          assigned_to: 'user-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: null,
+          due_date: '2024-01-15',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'user-1', display_name: 'Test Parent', avatar_url: null, nickname: null },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+        expect(screen.getByText('Parent Only Task')).toBeInTheDocument()
+      })
+
+      // Click on Timmy filter (child-1)
+      const timmyFilter = screen.getByText('Little T')
+      await user.click(timmyFilter)
+
+      await waitFor(() => {
+        // Clean Room is assigned to child-1, should still show
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+        // Parent Only Task is assigned to user-1, should be filtered out (line 361)
+        expect(screen.queryByText('Parent Only Task')).not.toBeInTheDocument()
+      })
     })
 
     it('filters by time of day', async () => {

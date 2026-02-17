@@ -346,6 +346,50 @@ describe('TaskForm', () => {
     })
   })
 
+  describe('Dropdown interactions', () => {
+    it('changes Assign To dropdown to a specific member', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Assigned Task')
+
+      // Change Assign To dropdown (it defaults to "Anyone")
+      const assignSelect = screen.getByDisplayValue('Anyone')
+      await userEvent.selectOptions(assignSelect, 'user-1')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ assigned_to: 'user-1' }),
+          undefined
+        )
+      })
+    })
+
+    it('changes Repeat dropdown to Daily', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Recurring Task')
+
+      // Change Repeat dropdown
+      const repeatSelect = screen.getByDisplayValue('One time only')
+      await userEvent.selectOptions(repeatSelect, 'daily')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ recurring: 'daily' }),
+          undefined
+        )
+      })
+    })
+  })
+
   describe('Common Behavior', () => {
     it('does not render when isOpen is false', () => {
       render(<TaskForm {...defaultProps} isOpen={false} />)

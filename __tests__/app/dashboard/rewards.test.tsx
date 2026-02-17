@@ -132,6 +132,24 @@ describe('RewardsPage', () => {
     })
   })
 
+  describe('fetchData edge cases', () => {
+    it('stops loading when user is not authenticated', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).not.toBeInTheDocument()
+      })
+    })
+
+    it('stops loading when profile is not found', async () => {
+      mockProfileData.current = null
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).not.toBeInTheDocument()
+      })
+    })
+  })
+
   it('renders 4th+ members in a list below podium', async () => {
     const fourMembers = [
       ...mockMembers,
