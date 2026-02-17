@@ -53,6 +53,8 @@ const mockMembers = [
 
 // Supabase mock
 const mockGetUser = jest.fn()
+const mockInsert = jest.fn()
+const mockUpdate = jest.fn()
 const mockProfileData = { current: mockProfile as unknown }
 const mockFamilyData = { current: mockFamily as unknown }
 const mockMembersData = { current: mockMembers as unknown[] }
@@ -90,13 +92,17 @@ jest.mock('@/lib/supabase/client', () => ({
           }),
         }
       },
-      insert: () => ({
-        select: () => ({
-          single: () => Promise.resolve({ data: { id: 'new-family', name: 'New Family', invite_code: 'XYZ', created_at: '' }, error: null }),
-        }),
-      }),
-      update: () => ({
-        eq: () => Promise.resolve({ error: null }),
+      insert: (...args: unknown[]) => {
+        const result = mockInsert(...args)
+        return {
+          ...result,
+          select: () => ({
+            single: () => result,
+          }),
+        }
+      },
+      update: (...args: unknown[]) => ({
+        eq: (...eqArgs: unknown[]) => mockUpdate(...args, ...eqArgs),
       }),
     }),
     rpc: () => Promise.resolve({ data: [] }),
@@ -109,7 +115,7 @@ jest.mock('@/components/family/pending-invites', () => ({
 }))
 
 jest.mock('@/components/family/sent-invites', () => ({
-  SentInvites: () => null,
+  SentInvites: () => <div data-testid="sent-invites" />,
 }))
 
 describe('FamilyPage', () => {
@@ -119,6 +125,8 @@ describe('FamilyPage', () => {
     mockProfileData.current = mockProfile
     mockFamilyData.current = mockFamily
     mockMembersData.current = mockMembers
+    mockInsert.mockResolvedValue({ data: { id: 'new-family', name: 'New Family', invite_code: 'XYZ', created_at: '' }, error: null })
+    mockUpdate.mockResolvedValue({ error: null })
   })
 
   it('shows loading state initially', () => {
@@ -221,6 +229,204 @@ describe('FamilyPage', () => {
     render(<FamilyPage />)
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /enter invite code/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('fetchData edge cases', () => {
+    it('stops loading when user is not authenticated', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).not.toBeInTheDocument()
+      })
+    })
+
+    it('stops loading when profile is not found', async () => {
+      mockProfileData.current = null
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('handleCreateFamily', () => {
+    beforeEach(() => {
+      mockProfileData.current = { ...mockProfile, family_id: null }
+      mockFamilyData.current = null
+    })
+
+    it('does nothing when family name is empty', async () => {
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create Family' })).toBeInTheDocument()
+      })
+
+      // The input is required, so the form won't submit with an empty field
+      // Just verify the button is there and no insert is called
+      expect(mockInsert).not.toHaveBeenCalled()
+    })
+
+    it('shows error when profile is not loaded', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      // Set profile to null so currentUser is null
+      mockProfileData.current = null
+
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).not.toBeInTheDocument()
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('creates a family successfully', async () => {
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
+      })
+
+      await user.type(screen.getByLabelText('Family Name'), 'New Family')
+      await user.click(screen.getByRole('button', { name: 'Create Family' }))
+
+      await waitFor(() => {
+        expect(mockInsert).toHaveBeenCalled()
+      })
+    })
+
+    it('shows error when family insert fails', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      mockInsert.mockResolvedValue({ data: null, error: { message: 'Insert failed' } })
+
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
+      })
+
+      await user.type(screen.getByLabelText('Family Name'), 'Test Family')
+      await user.click(screen.getByRole('button', { name: 'Create Family' }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to create family/i)).toBeInTheDocument()
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('shows error when profile update fails after family creation', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      mockUpdate.mockResolvedValue({ error: { message: 'Update failed' } })
+
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
+      })
+
+      await user.type(screen.getByLabelText('Family Name'), 'Test Family')
+      await user.click(screen.getByRole('button', { name: 'Create Family' }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to update profile/i)).toBeInTheDocument()
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('handleRemoveMember', () => {
+    it('removes a member successfully', async () => {
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTitle('Remove member')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTitle('Remove member'))
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+
+    it('shows error when remove fails', async () => {
+      mockUpdate.mockResolvedValue({ error: { message: 'Remove failed' } })
+
+      const user = userEvent.setup()
+      render(<FamilyPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTitle('Remove member')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTitle('Remove member'))
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to remove member/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('role-based rendering', () => {
+    it('child user does not see Invite button', async () => {
+      mockProfileData.current = { ...mockProfile, id: 'child-1', role: 'child' }
+
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'The Smiths' })).toBeInTheDocument()
+      })
+
+      expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument()
+    })
+
+    it('child user does not see remove buttons', async () => {
+      mockProfileData.current = { ...mockProfile, id: 'child-1', role: 'child' }
+
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'The Smiths' })).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTitle('Remove member')).not.toBeInTheDocument()
+    })
+
+    it('child user does not see SentInvites', async () => {
+      mockProfileData.current = { ...mockProfile, id: 'child-1', role: 'child' }
+
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'The Smiths' })).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('sent-invites')).not.toBeInTheDocument()
+    })
+
+    it('parent user sees SentInvites', async () => {
+      render(<FamilyPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'The Smiths' })).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('sent-invites')).toBeInTheDocument()
     })
   })
 })

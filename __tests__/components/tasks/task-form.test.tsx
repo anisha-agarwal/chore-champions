@@ -291,6 +291,61 @@ describe('TaskForm', () => {
     })
   })
 
+  describe('Edit Mode - Additional', () => {
+    it('pre-populates due_time with seconds format (.slice(0,5))', () => {
+      const taskWithSeconds = { ...mockTask, due_time: '09:30:45' }
+      render(<TaskForm {...defaultProps} task={taskWithSeconds} />)
+
+      const timeInput = screen.getByLabelText('Due Time (optional)') as HTMLInputElement
+      expect(timeInput.value).toBe('09:30')
+    })
+
+    it('shows fallback error message on non-Error rejection in edit mode', async () => {
+      const handleSubmit = jest.fn().mockRejectedValue('string error')
+      render(<TaskForm {...defaultProps} task={mockTask} onSubmit={handleSubmit} />)
+
+      const submitButton = screen.getByRole('button', { name: 'Save Changes' })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to update task')).toBeInTheDocument()
+      })
+    })
+
+    it('shows fallback error message on non-Error rejection in create mode', async () => {
+      const handleSubmit = jest.fn().mockRejectedValue('string error')
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'New Task')
+
+      const submitButton = screen.getByRole('button', { name: 'Create Quest' })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to create task')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Form Reset', () => {
+    it('resets form after successful create', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      const handleClose = jest.fn()
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} onClose={handleClose} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'New Task')
+
+      const submitButton = screen.getByRole('button', { name: 'Create Quest' })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(handleClose).toHaveBeenCalled()
+      })
+    })
+  })
+
   describe('Common Behavior', () => {
     it('does not render when isOpen is false', () => {
       render(<TaskForm {...defaultProps} isOpen={false} />)

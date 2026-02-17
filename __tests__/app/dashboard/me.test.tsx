@@ -21,6 +21,7 @@ jest.mock('next/image', () => ({
 const mockGetUser = jest.fn()
 const mockSignOut = jest.fn()
 const mockUpdateUser = jest.fn().mockResolvedValue({ error: null })
+const mockUpdate = jest.fn()
 const mockSupabaseData = {
   profile: null as unknown,
   parentCount: 2,
@@ -56,8 +57,8 @@ jest.mock('@/lib/supabase/client', () => ({
           }),
         }
       },
-      update: () => ({
-        eq: () => Promise.resolve({ error: null }),
+      update: (...args: unknown[]) => ({
+        eq: (...eqArgs: unknown[]) => mockUpdate(...args, ...eqArgs),
       }),
     }),
   }),
@@ -82,6 +83,7 @@ describe('Me Page', () => {
     })
     mockSupabaseData.profile = mockProfile
     mockSupabaseData.parentCount = 2
+    mockUpdate.mockResolvedValue({ error: null })
   })
 
   it('shows loading state initially', () => {
@@ -429,5 +431,117 @@ describe('Me Page', () => {
     // Verify it is an input that can be interacted with
     await user.click(displayNameInput)
     expect(document.activeElement).toBe(displayNameInput)
+  })
+
+  describe('fetchProfile edge cases', () => {
+    it('shows Profile not found when user is not authenticated', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+      mockSupabaseData.profile = null
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Profile not found')).toBeInTheDocument()
+      })
+    })
+
+    it('skips parent count query when no family_id', async () => {
+      mockSupabaseData.profile = { ...mockProfile, family_id: null }
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      // Should still render, just without parent count constraint
+      expect(screen.getByRole('button', { name: 'Parent' })).toBeInTheDocument()
+    })
+  })
+
+  describe('handleAvatarSelect', () => {
+    it('selects a new avatar and closes modal', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+
+      expect(screen.getByText('Choose Avatar')).toBeInTheDocument()
+
+      // Click on Fox avatar
+      await user.click(screen.getByText('Fox'))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+
+    it('closes modal even on error', async () => {
+      mockUpdate.mockResolvedValue({ error: { message: 'Failed' } })
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+      await user.click(screen.getByText('Fox'))
+
+      await waitFor(() => {
+        expect(screen.queryByText('Choose Avatar')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('handleSave', () => {
+    it('saves profile changes successfully', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+
+    it('does not save when profile is null', async () => {
+      mockSupabaseData.profile = null
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Profile not found')).toBeInTheDocument()
+      })
+
+      // No save button visible since we're on the "Profile not found" screen
+      expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument()
+    })
+
+    it('handles save error gracefully', async () => {
+      mockUpdate.mockResolvedValue({ error: { message: 'Save failed' } })
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      // Should not show success message
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
   })
 })

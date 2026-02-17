@@ -106,6 +106,7 @@ describe('SentInvites', () => {
   })
 
   it('renders nothing on error', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
     mockSelect.mockReturnValue({
       eq: () => ({
         eq: () => ({
@@ -120,5 +121,6 @@ describe('SentInvites', () => {
       // On error, invites stay empty so component returns null
       expect(container.firstChild).toBeNull()
     })
+    consoleSpy.mockRestore()
   })
 })

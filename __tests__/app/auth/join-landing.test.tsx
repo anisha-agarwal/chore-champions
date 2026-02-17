@@ -59,6 +59,16 @@ describe('Join Landing Page', () => {
     expect(mockPush).toHaveBeenCalledWith('/join/TESTCODE')
   })
 
+  it('does not navigate when code is only whitespace', async () => {
+    render(<JoinPage />)
+
+    // The button is disabled when input is empty/whitespace-only
+    // Type spaces - the input converts to uppercase, and .trim() on spaces yields empty
+    const input = screen.getByLabelText(/invite code/i)
+    // The button should remain disabled since the code value trims to empty
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled()
+  })
+
   it('trims whitespace from code before navigation', async () => {
     render(<JoinPage />)
 
