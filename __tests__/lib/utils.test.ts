@@ -12,6 +12,7 @@ import {
   getTimeRemaining,
   formatTimeRemaining,
   toTimeString,
+  isInAppBrowser,
 } from '@/lib/utils'
 
 describe('cn (classnames utility)', () => {
@@ -294,5 +295,40 @@ describe('toTimeString', () => {
 
   it('converts end of day correctly', () => {
     expect(toTimeString('23:59')).toBe('23:59:00')
+  })
+})
+
+describe('isInAppBrowser', () => {
+  it('detects Facebook in-app browser', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) FBAN/FBIOS')).toBe(true)
+    expect(isInAppBrowser('Mozilla/5.0 (Linux; Android 13) FBAV/400.0')).toBe(true)
+  })
+
+  it('detects Instagram in-app browser', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Instagram 275.0')).toBe(true)
+  })
+
+  it('detects WhatsApp in-app browser', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (Linux; Android 13) WhatsApp/2.23')).toBe(true)
+  })
+
+  it('detects LinkedIn in-app browser', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) LinkedInApp')).toBe(true)
+  })
+
+  it('detects WeChat in-app browser', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (Linux; Android 13) MicroMessenger/8.0')).toBe(true)
+  })
+
+  it('returns false for Safari', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1')).toBe(false)
+  })
+
+  it('returns false for Chrome', () => {
+    expect(isInAppBrowser('Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')).toBe(false)
+  })
+
+  it('returns false for empty string', () => {
+    expect(isInAppBrowser('')).toBe(false)
   })
 })

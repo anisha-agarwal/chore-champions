@@ -1,5 +1,34 @@
 import { test, expect } from '@playwright/test'
 
+test.describe('In-App Browser Banner', () => {
+  test('shows warning banner when using in-app browser user agent', async ({ browser }) => {
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) FBAN/FBIOS',
+    })
+    const page = await context.newPage()
+
+    await page.goto('/login')
+    await expect(page.getByText(/open in your browser/i)).toBeVisible()
+    await context.close()
+  })
+
+  test('shows warning banner on signup page in in-app browser', async ({ browser }) => {
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Linux; Android 13) WhatsApp/2.23',
+    })
+    const page = await context.newPage()
+
+    await page.goto('/signup')
+    await expect(page.getByText(/open in your browser/i)).toBeVisible()
+    await context.close()
+  })
+
+  test('does not show banner in regular browser', async ({ page }) => {
+    await page.goto('/login')
+    await expect(page.getByText(/open in your browser/i)).not.toBeVisible()
+  })
+})
+
 test.describe('Login Page', () => {
   test('displays login form', async ({ page }) => {
     await page.goto('/login')
