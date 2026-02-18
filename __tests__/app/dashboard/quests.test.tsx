@@ -143,10 +143,10 @@ jest.mock('@/lib/supabase/client', () => ({
           delete: () => ({
             eq: (...args: unknown[]) => {
               const result = mockDelete(...args)
-              return {
-                ...result,
-                eq: () => result,
-              }
+              // result is a Promise; make it thenable AND chainable with .eq()
+              const thenable = result.then((val: unknown) => val)
+              ;(thenable as Record<string, unknown>).eq = () => result
+              return thenable
             },
           }),
         }
@@ -384,7 +384,11 @@ describe('QuestsPage', () => {
     it('filters out recurring tasks past end_date', async () => {
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().slice(0, 10)
+      // Use local date formatting to match toDateString() used in the component
+      const year = yesterday.getFullYear()
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0')
+      const day = String(yesterday.getDate()).padStart(2, '0')
+      const yesterdayStr = `${year}-${month}-${day}`
 
       mockRecurringTasksData.current = [
         {
@@ -440,6 +444,90 @@ describe('QuestsPage', () => {
         expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
       })
       expect(screen.queryByText('Skipped Chore')).not.toBeInTheDocument()
+    })
+
+    it('handles null skips data (line 106 || branch)', async () => {
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-nullskip',
+          family_id: 'family-1',
+          title: 'Null Skip Daily',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+      // Return null for skips data (instead of [])
+      mockSkipsData.current = null as unknown as unknown[]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('Null Skip Daily')).toBeInTheDocument()
+      })
+    })
+
+    it('handles null completions data (line 125 || branch)', async () => {
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-nullcomp',
+          family_id: 'family-1',
+          title: 'Null Comp Daily',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+      mockCompletionsData.current = null as unknown as unknown[]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('Null Comp Daily')).toBeInTheDocument()
+      })
+    })
+
+    it('handles null members data (line 57 || branch)', async () => {
+      mockMembersData.current = null as unknown as unknown[]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+    })
+
+    it('handles null oneTimeTasks data (line 134 || branch)', async () => {
+      mockOneTimeTasksData.current = null as unknown as unknown[]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+    })
+
+    it('handles null recurringTasks data (line 83 || branch)', async () => {
+      mockRecurringTasksData.current = null as unknown as unknown[]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
     })
 
     it('marks recurring tasks as completed from completions table', async () => {
@@ -516,6 +604,35 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Not authenticated')).toBeInTheDocument()
       })
       consoleSpy.mockRestore()
+    })
+  })
+
+  describe('handleSubmitTask with due_time', () => {
+    it('submits task with due_time in create mode (line 168 truthy branch)', async () => {
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+
+      const fab = document.querySelector('button.fixed') as HTMLElement
+      await user.click(fab)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await user.type(titleInput, 'Task With Time')
+
+      // Set due time
+      const { fireEvent } = await import('@testing-library/react')
+      const timeInput = screen.getByLabelText('Due Time (optional)')
+      fireEvent.change(timeInput, { target: { value: '14:30' } })
+
+      const createBtn = screen.getByRole('button', { name: 'Create Quest' })
+      await user.click(createBtn)
+
+      await waitFor(() => {
+        expect(mockInsert).toHaveBeenCalled()
+      })
     })
   })
 
@@ -872,6 +989,58 @@ describe('QuestsPage', () => {
     })
   })
 
+  describe('handleSubmitTask error on update', () => {
+    it('shows error when task update fails (line 178)', async () => {
+      mockUpdate.mockResolvedValue({ error: { message: 'Update failed' } })
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Click edit button
+      await user.click(screen.getByTitle('Edit quest'))
+      await waitFor(() => {
+        expect(screen.getByText('Edit Quest')).toBeInTheDocument()
+      })
+
+      // Submit the edit form
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        // The thrown error object is not an Error instance, so TaskForm falls back to generic message
+        expect(screen.getByText('Failed to update task')).toBeInTheDocument()
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('handleSubmitTask error on create', () => {
+    it('shows error when task insert fails (line 188)', async () => {
+      mockInsert.mockResolvedValue({ error: { message: 'Insert failed' } })
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+
+      const fab = document.querySelector('button.fixed') as HTMLElement
+      await user.click(fab)
+      await user.type(screen.getByPlaceholderText('e.g., Clean your room'), 'Fail Task')
+      await user.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        // The thrown error object is not an Error instance, so TaskForm falls back to generic message
+        expect(screen.getByText('Failed to create task')).toBeInTheDocument()
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
   describe('handleUncompleteTask for recurring task', () => {
     it('uncompletes a recurring task (deletes completion with date match)', async () => {
       mockOneTimeTasksData.current = []
@@ -910,6 +1079,132 @@ describe('QuestsPage', () => {
       await waitFor(() => {
         expect(mockDelete).toHaveBeenCalled()
       })
+    })
+  })
+
+  describe('handleCompleteTask error paths', () => {
+    it('throws when update fails for non-recurring task (line 285)', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Make update fail AFTER render/fetchData (fetchData only uses select, not update)
+      mockUpdate.mockResolvedValue({ error: { message: 'Complete failed' } })
+
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      // The error propagates through TaskCard's handleComplete catch
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Complete failed' }))
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('throws when completion insert fails (line 303)', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Make insert fail AFTER render (so fetchData's selects work fine)
+      mockInsert.mockResolvedValue({ error: { message: 'Completion failed' } })
+
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Completion failed' }))
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('handleUncompleteTask error paths', () => {
+    it('throws when uncomplete update fails (line 322)', async () => {
+      mockOneTimeTasksData.current = [{ ...mockTasks[0], completed: true }]
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Make update fail for the uncomplete operation
+      mockUpdate.mockResolvedValue({ error: { message: 'Uncomplete failed' } })
+
+      const undoButton = screen.getByTitle('Click to undo')
+      await user.click(undoButton)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalled()
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('throws when completion delete fails (line 338)', async () => {
+      mockOneTimeTasksData.current = [{ ...mockTasks[0], completed: true }]
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      // Make delete fail for task_completions
+      mockDelete.mockResolvedValue({ error: { message: 'Delete completion failed' } })
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      const undoButton = screen.getByTitle('Click to undo')
+      await user.click(undoButton)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalled()
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('isTaskOverdue edge cases', () => {
+    it('completes task with no due_date (line 349 - dateStr null)', async () => {
+      mockOneTimeTasksData.current = [
+        {
+          ...mockTasks[0],
+          due_date: null,
+          due_time: '14:30:00',
+        },
+      ]
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Complete the task - this calls isTaskOverdue which should return false for null dateStr
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+      consoleSpy.mockRestore()
     })
   })
 
@@ -978,6 +1273,77 @@ describe('QuestsPage', () => {
     })
   })
 
+  describe('weekly recurring task with null due_date', () => {
+    it('filters out weekly task with null due_date (returns false)', async () => {
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-nulldate',
+          family_id: 'family-1',
+          title: 'Weekly No Date',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'weekly',
+          due_date: null,
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Weekly No Date')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('handleCompleteTask with overdue non-recurring', () => {
+    it('completes an overdue non-recurring task (half points, line 289)', async () => {
+      // We need a task with due_time set in the past so isTaskOverdue returns true
+      // and it's non-recurring so we hit both the non-recurring update AND half-points path
+      mockOneTimeTasksData.current = [
+        {
+          id: 'task-overdue',
+          family_id: 'family-1',
+          title: 'Overdue Non-Recurring',
+          description: null,
+          assigned_to: 'child-1',
+          points: 10,
+          time_of_day: 'morning',
+          recurring: null,
+          due_date: new Date().toISOString().slice(0, 10),
+          due_time: '00:01:00', // Past time
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('Overdue Non-Recurring')).toBeInTheDocument()
+      })
+
+      const taskCard = screen.getByText('Overdue Non-Recurring').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+        expect(mockInsert).toHaveBeenCalled()
+      })
+    })
+  })
+
   describe('task filtering', () => {
     it('filters tasks by all-kids member selection', async () => {
       // Add a task assigned to the parent (should be filtered out with all-kids)
@@ -1021,6 +1387,43 @@ describe('QuestsPage', () => {
       })
     })
 
+    it('shows unassigned tasks (assigned_to=null) when all-kids is selected (line 273 branch)', async () => {
+      mockOneTimeTasksData.current = [
+        ...mockTasks,
+        {
+          id: 'task-unassigned',
+          family_id: 'family-1',
+          title: 'Unassigned Task',
+          description: null,
+          assigned_to: null,
+          points: 5,
+          time_of_day: 'morning',
+          recurring: null,
+          due_date: '2024-01-15',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: null,
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unassigned Task')).toBeInTheDocument()
+      })
+
+      // Select "All kids" filter
+      await user.click(screen.getByText('All kids'))
+      await waitFor(() => {
+        // Unassigned task should still show (assigned_to is null, passes filter)
+        expect(screen.getByText('Unassigned Task')).toBeInTheDocument()
+      })
+    })
+
     it('filters tasks by specific member and hides non-matching tasks', async () => {
       // Add a second task assigned to the parent so it gets filtered out
       mockOneTimeTasksData.current = [
@@ -1061,6 +1464,276 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
         // Parent Only Task is assigned to user-1, should be filtered out (line 361)
         expect(screen.queryByText('Parent Only Task')).not.toBeInTheDocument()
+      })
+    })
+
+    it('deletes a non-recurring task (handleConfirmDelete, line 203+)', async () => {
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Click the delete button
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Quest?')).toBeInTheDocument()
+      })
+
+      // Click "Delete" in the confirmation modal
+      await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+      await waitFor(() => {
+        expect(mockDelete).toHaveBeenCalled()
+      })
+    })
+
+    it('skips a recurring task today (handleSkipToday, lines 221-225)', async () => {
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-skip',
+          family_id: 'family-1',
+          title: 'Recurring Skip Me',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recurring Skip Me')).toBeInTheDocument()
+      })
+
+      // Click the delete button (for recurring it shows skip/end options)
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Remove Quest?')).toBeInTheDocument()
+      })
+
+      // Click "Skip today only"
+      await user.click(screen.getByRole('button', { name: 'Skip today only' }))
+
+      await waitFor(() => {
+        expect(mockInsert).toHaveBeenCalled()
+      })
+    })
+
+    it('ends a recurring task (handleEndRecurring, line 245)', async () => {
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-end',
+          family_id: 'family-1',
+          title: 'Recurring End Me',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recurring End Me')).toBeInTheDocument()
+      })
+
+      // Click the delete button
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Remove Quest?')).toBeInTheDocument()
+      })
+
+      // Click "Stop all future occurrences"
+      await user.click(screen.getByRole('button', { name: 'Stop all future occurrences' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+
+    it('handles complete when user is null (line 273 guard)', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Make getUser return null AFTER render
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.any(Error))
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('handles uncomplete when user is null (line 310 guard)', async () => {
+      mockOneTimeTasksData.current = [{ ...mockTasks[0], completed: true }]
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      // Make getUser return null AFTER render
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+
+      const undoButton = screen.getByTitle('Click to undo')
+      await user.click(undoButton)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to uncomplete task:', expect.any(Error))
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('shows error when delete fails (line 211-213)', async () => {
+      mockDelete.mockResolvedValue({ error: { message: 'Permission denied' } })
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Quest?')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('You do not have permission to delete this quest.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error when skip fails (line 236-237)', async () => {
+      mockInsert.mockResolvedValue({ error: { message: 'Skip denied' } })
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-skip-err',
+          family_id: 'family-1',
+          title: 'Recurring Skip Error',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recurring Skip Error')).toBeInTheDocument()
+      })
+
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Remove Quest?')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Skip today only' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('You do not have permission to skip this quest.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error when end recurring fails (line 257-259)', async () => {
+      mockUpdate.mockResolvedValue({ error: { message: 'End denied' } })
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-end-err',
+          family_id: 'family-1',
+          title: 'Recurring End Error',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recurring End Error')).toBeInTheDocument()
+      })
+
+      const deleteButton = screen.getByTitle('Delete quest')
+      await user.click(deleteButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Remove Quest?')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Stop all future occurrences' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('You do not have permission to modify this quest.')).toBeInTheDocument()
       })
     })
 

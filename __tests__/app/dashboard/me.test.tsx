@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MePage from '@/app/(dashboard)/me/page'
 
@@ -433,6 +433,49 @@ describe('Me Page', () => {
     expect(document.activeElement).toBe(displayNameInput)
   })
 
+  describe('fetchProfile falsy branch coverage', () => {
+    it('handles null email in user (line 49 || falsy)', async () => {
+      mockGetUser.mockResolvedValue({
+        data: { user: { id: 'user-123', email: null } },
+      })
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      // Email input should show empty string since user.email is null
+      // Use the label to find it specifically
+      const emailLabel = screen.getByText('Email')
+      const emailSection = emailLabel.closest('div')
+      const emailInput = emailSection?.querySelector('input')
+      expect(emailInput).toHaveValue('')
+    })
+
+    it('handles profile with nickname set (line 51 truthy branch)', async () => {
+      mockSupabaseData.profile = { ...mockProfile, nickname: 'Cool Nick' }
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      expect(screen.getByDisplayValue('Cool Nick')).toBeInTheDocument()
+    })
+
+    it('handles null parent count (line 61 || falsy)', async () => {
+      mockSupabaseData.parentCount = null as unknown as number
+
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+    })
+  })
+
   describe('fetchProfile edge cases', () => {
     it('shows Profile not found when user is not authenticated', async () => {
       mockGetUser.mockResolvedValue({ data: { user: null } })
@@ -566,7 +609,9 @@ describe('Me Page', () => {
       })
 
       // Advance past the 1500ms timeout
-      jest.advanceTimersByTime(1600)
+      act(() => {
+        jest.advanceTimersByTime(1600)
+      })
 
       await waitFor(() => {
         expect(screen.queryByText('Password updated successfully!')).not.toBeInTheDocument()
@@ -593,7 +638,9 @@ describe('Me Page', () => {
       })
 
       // Advance past the 1500ms setTimeout
-      jest.advanceTimersByTime(1600)
+      act(() => {
+        jest.advanceTimersByTime(1600)
+      })
 
       // The success state should have been reset (setSaveSuccess(false))
       // This covers line 92
@@ -645,6 +692,122 @@ describe('Me Page', () => {
       // Should not show success message
       await waitFor(() => {
         expect(mockUpdate).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('input onChange handlers (lines 244, 250)', () => {
+    it('triggers displayName onChange by typing', async () => {
+      const { fireEvent } = await import('@testing-library/react')
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      const displayNameInput = screen.getByDisplayValue('Test User')
+      fireEvent.change(displayNameInput, { target: { value: 'Updated Name' } })
+      expect(displayNameInput).toHaveValue('Updated Name')
+    })
+
+    it('triggers nickname onChange by typing', async () => {
+      const { fireEvent } = await import('@testing-library/react')
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      const nicknameInput = screen.getByPlaceholderText('e.g., Baby Bison, Panther')
+      fireEvent.change(nicknameInput, { target: { value: 'Cool Nickname' } })
+      expect(nicknameInput).toHaveValue('Cool Nickname')
+    })
+  })
+
+  describe('avatar modal close via backdrop (line 290)', () => {
+    it('closes avatar modal via backdrop click', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+      expect(screen.getByText('Choose Avatar')).toBeInTheDocument()
+
+      // Close via backdrop
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Choose Avatar')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('avatar modal grid rendering (lines 244-290)', () => {
+    it('renders all avatar options in the grid', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+
+      // Verify all avatar options render
+      expect(screen.getByText('Panther')).toBeInTheDocument()
+      expect(screen.getByText('Bison')).toBeInTheDocument()
+      expect(screen.getByText('Fox')).toBeInTheDocument()
+      expect(screen.getByText('Owl')).toBeInTheDocument()
+      expect(screen.getByText('Bear')).toBeInTheDocument()
+      expect(screen.getByText('Wolf')).toBeInTheDocument()
+      expect(screen.getByText('Horse')).toBeInTheDocument()
+      expect(screen.getByText('Snake')).toBeInTheDocument()
+      expect(screen.getByText('Rabbit')).toBeInTheDocument()
+      expect(screen.getByText('Cat')).toBeInTheDocument()
+      expect(screen.getByText('Dog')).toBeInTheDocument()
+      expect(screen.getByText('Dragon')).toBeInTheDocument()
+
+      // Verify grid container exists
+      const gridContainer = screen.getByText('Panther').closest('.grid')
+      expect(gridContainer).toBeInTheDocument()
+    })
+
+    it('highlights the currently selected avatar', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+
+      // The profile has avatar_url: '/avatars/panther.svg', so Panther should have ring class
+      const pantherButton = screen.getByText('Panther').closest('button')
+      expect(pantherButton).toHaveClass('ring-2')
+    })
+
+    it('closes avatar modal after selecting an avatar', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Change avatar' }))
+      expect(screen.getByText('Choose Avatar')).toBeInTheDocument()
+
+      // Click on Bear avatar
+      await user.click(screen.getByText('Bear'))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+        expect(screen.queryByText('Choose Avatar')).not.toBeInTheDocument()
       })
     })
   })

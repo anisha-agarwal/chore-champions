@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { InviteModal } from '@/components/family/invite-modal'
 
@@ -188,6 +188,31 @@ describe('InviteModal', () => {
       })
     })
 
+    it('resets Copied! state after 2 seconds (line 36 setTimeout callback)', async () => {
+      jest.useFakeTimers()
+
+      render(<InviteModal {...defaultProps} />)
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy' })
+      fireEvent.click(copyButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Copied!')).toBeInTheDocument()
+      })
+
+      // Advance past the 2000ms timeout
+      act(() => {
+        jest.advanceTimersByTime(2100)
+      })
+
+      await waitFor(() => {
+        // Should show "Copy" again
+        expect(screen.queryByText('Copied!')).not.toBeInTheDocument()
+      })
+
+      jest.useRealTimers()
+    })
+
     it('copies invite link to clipboard', async () => {
       render(<InviteModal {...defaultProps} />)
 
@@ -294,6 +319,69 @@ describe('InviteModal', () => {
 
       // The Share Code tab should be active again (setActiveTab('code') was called in handleClose)
       expect(screen.getByRole('tab', { name: 'Share Code' })).toHaveAttribute('aria-selected', 'true')
+    })
+  })
+
+  describe('clicking Share Code tab (line 125)', () => {
+    it('switches back to Share Code tab from Email tab', async () => {
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Switch back to code tab by clicking "Share Code"
+      await user.click(screen.getByText('Share Code'))
+
+      // Should show code tab content
+      expect(screen.getByText('Invite Code')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Email Address')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('handleClose resets state on Done click from email tab', () => {
+    it('resets tab back to code when Done/close is called while on email tab', async () => {
+      const onClose = jest.fn()
+      const user = userEvent.setup()
+      const { rerender } = render(<InviteModal {...defaultProps} onClose={onClose} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Type something in the email field
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
+
+      // Close via backdrop (triggers handleClose which resets email, emailError, emailSuccess, and activeTab)
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      expect(onClose).toHaveBeenCalled()
+
+      // Re-open modal
+      rerender(<InviteModal {...defaultProps} isOpen={true} onClose={onClose} />)
+
+      // Tab should be reset to code (setActiveTab('code') in handleClose)
+      expect(screen.getByRole('tab', { name: 'Share Code' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('Invite Code')).toBeInTheDocument()
+    })
+  })
+
+  describe('handleSendInvite empty email guard (line 44)', () => {
+    it('does nothing when email is empty (programmatic form submit)', async () => {
+      const { fireEvent: fe } = await import('@testing-library/react')
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByText('Invite by Email'))
+
+      // Programmatically submit form to bypass HTML required validation
+      const form = document.querySelector('form')!
+      fe.submit(form)
+
+      // RPC should not be called since email is empty
+      expect(mockRpc).not.toHaveBeenCalled()
     })
   })
 

@@ -37,7 +37,13 @@ describe('formatDate', () => {
     expect(formatted).toContain('15')
   })
 
-  it('formats a date string', () => {
+  it('formats a date string input (line 10 string branch)', () => {
+    const formatted = formatDate('2024-06-20T00:00:00')
+    expect(formatted).toContain('Jun')
+    expect(formatted).toContain('20')
+  })
+
+  it('formats a Date object input (line 10 non-string branch)', () => {
     const date = new Date(2024, 5, 20) // June 20, 2024
     const formatted = formatDate(date)
     expect(formatted).toContain('Jun')

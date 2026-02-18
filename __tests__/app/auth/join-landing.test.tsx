@@ -69,6 +69,18 @@ describe('Join Landing Page', () => {
     expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled()
   })
 
+  it('does not navigate when submitting empty code via form (line 13 falsy branch)', async () => {
+    render(<JoinPage />)
+
+    // Simulate form submission with empty input by dispatching submit event directly
+    const form = document.querySelector('form')!
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+    form.dispatchEvent(submitEvent)
+
+    // Should not navigate
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
   it('trims whitespace from code before navigation', async () => {
     render(<JoinPage />)
 

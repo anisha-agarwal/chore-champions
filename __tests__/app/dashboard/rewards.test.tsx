@@ -174,4 +174,89 @@ describe('RewardsPage', () => {
       expect(screen.getByText('4')).toBeInTheDocument()
     })
   })
+
+  describe('podium with fewer than 3 members', () => {
+    it('renders podium with only 1 member (no 2nd/3rd place)', async () => {
+      mockMembersData.current = [
+        { ...mockProfile, points: 150 },
+      ]
+
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('150 pts')).toBeInTheDocument()
+      })
+      // Only 1st place should render, no 2nd or 3rd
+      expect(screen.queryByText('100 pts')).not.toBeInTheDocument()
+      expect(screen.queryByText('75 pts')).not.toBeInTheDocument()
+    })
+
+    it('renders podium with only 2 members (no 3rd place)', async () => {
+      mockMembersData.current = [
+        { ...mockProfile, points: 150 },
+        {
+          id: 'child-1',
+          family_id: 'family-1',
+          display_name: 'Timmy',
+          avatar_url: null,
+          nickname: 'Little T',
+          role: 'child',
+          points: 100,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]
+
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(screen.getByText('150 pts')).toBeInTheDocument()
+        expect(screen.getByText('100 pts')).toBeInTheDocument()
+      })
+      // No 3rd place
+      expect(screen.queryByText('75 pts')).not.toBeInTheDocument()
+    })
+
+    it('renders 2nd place member with null nickname (line 98/102 || falsy branch)', async () => {
+      mockMembersData.current = [
+        { ...mockProfile, points: 150 },
+        {
+          id: 'child-1',
+          family_id: 'family-1',
+          display_name: 'Timmy Jones',
+          avatar_url: null,
+          nickname: null,
+          role: 'child',
+          points: 100,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'child-2',
+          family_id: 'family-1',
+          display_name: 'Sally Smith',
+          avatar_url: null,
+          nickname: null,
+          role: 'child',
+          points: 75,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]
+
+      render(<RewardsPage />)
+      await waitFor(() => {
+        // 2nd place should show first name from display_name since nickname is null
+        expect(screen.getByText('Timmy')).toBeInTheDocument()
+        // 3rd place similarly
+        expect(screen.getByText('Sally')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('membersData null branch', () => {
+    it('handles null membersData (line 42 falsy branch)', async () => {
+      mockMembersData.current = null as unknown as unknown[]
+
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Rewards' })).toBeInTheDocument()
+      })
+    })
+  })
 })

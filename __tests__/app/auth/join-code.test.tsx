@@ -141,6 +141,38 @@ describe('Join Family Page (with code)', () => {
     expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login')
   })
 
+  it('handles signUp returning null user without error (line 76 falsy branch)', async () => {
+    mockSignUp.mockResolvedValue({ data: { user: null }, error: null })
+
+    render(<JoinFamilyPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Join Family' })).toBeInTheDocument()
+    })
+
+    await userEvent.type(screen.getByLabelText('Display Name'), 'New User')
+    await userEvent.type(screen.getByLabelText('Email'), 'new@example.com')
+    await userEvent.type(screen.getByLabelText('Password'), 'password123')
+
+    await userEvent.click(screen.getByRole('button', { name: /join the smiths/i }))
+
+    await waitFor(() => {
+      // Should navigate to quests even when user is null (skips profile update)
+      expect(mockPush).toHaveBeenCalledWith('/quests')
+    })
+  })
+
+  it('shows role selector with Parent and Kid options', async () => {
+    render(<JoinFamilyPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Join Family' })).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: 'Parent' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Kid' })).toBeInTheDocument()
+  })
+
   it('shows Joining... while loading', async () => {
     mockSignUp.mockReturnValue(new Promise(() => {}))
 
@@ -159,5 +191,29 @@ describe('Join Family Page (with code)', () => {
     await waitFor(() => {
       expect(screen.getByText('Joining...')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Join Family Page - no code param (lines 27-29)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    // Override useParams to return empty code
+    const nav = jest.requireMock('next/navigation')
+    nav.useParams = () => ({ code: '' })
+  })
+
+  afterEach(() => {
+    // Restore original useParams mock
+    const nav = jest.requireMock('next/navigation')
+    nav.useParams = () => ({ code: 'TESTCODE' })
+  })
+
+  it('shows invalid invite when code param is empty', async () => {
+    render(<JoinFamilyPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Invalid Invite' })).toBeInTheDocument()
+    })
+    expect(screen.getByText('Invalid invite code')).toBeInTheDocument()
   })
 })

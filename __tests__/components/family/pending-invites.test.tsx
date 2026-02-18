@@ -191,6 +191,25 @@ describe('PendingInvites', () => {
     })
   })
 
+  it('handles null data from fetch (line 38 falsy branch)', async () => {
+    // Setup select mock to return null data (not error, but data is null)
+    const orderFn = jest.fn().mockResolvedValue({ data: null, error: null })
+    const eqStatusFn = jest.fn().mockReturnValue({ order: orderFn })
+    const eqUserFn = jest.fn().mockReturnValue({ eq: eqStatusFn })
+    mockSelect.mockReturnValue({ eq: eqUserFn })
+
+    const { container } = render(
+      <PendingInvites userId="user-1" onAccepted={mockOnAccepted} />
+    )
+
+    await waitFor(() => {
+      // After loading, should render nothing (empty invites)
+      expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Pending Invites')).not.toBeInTheDocument()
+  })
+
   it('shows error message on RPC failure', async () => {
     setupSelectMock(mockInvites)
     mockRpc.mockResolvedValue({ error: { message: 'Something went wrong' } })

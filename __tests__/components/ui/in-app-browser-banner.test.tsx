@@ -73,4 +73,28 @@ describe('InAppBrowserBanner', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('getServerSnapshot returns false when called by useSyncExternalStore (SSR path, line 16)', () => {
+    // Mock useSyncExternalStore to call the getServerSnapshot (3rd argument)
+    // and verify it returns false
+    const React = jest.requireActual('react') as typeof import('react')
+    let capturedServerSnapshot: (() => boolean) | undefined
+
+    jest.spyOn(React, 'useSyncExternalStore').mockImplementationOnce(
+      (_subscribe: () => () => void, getSnapshot: () => boolean, getServerSnapshot?: () => boolean) => {
+        capturedServerSnapshot = getServerSnapshot
+        // Still use the client snapshot for rendering
+        return getSnapshot()
+      }
+    )
+
+    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36')
+    render(<InAppBrowserBanner />)
+
+    // Verify getServerSnapshot was captured and returns false
+    expect(capturedServerSnapshot).toBeDefined()
+    expect(capturedServerSnapshot!()).toBe(false)
+
+    jest.restoreAllMocks()
+  })
 })

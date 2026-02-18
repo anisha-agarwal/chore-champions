@@ -390,6 +390,123 @@ describe('TaskForm', () => {
     })
   })
 
+  describe('Description textarea onChange (line 129)', () => {
+    it('triggers description onChange by typing', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Task With Desc')
+
+      const descInput = screen.getByPlaceholderText('Optional details...')
+      await userEvent.type(descInput, 'Some description')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ description: 'Some description' }),
+          undefined
+        )
+      })
+    })
+  })
+
+  describe('Select Dropdowns Rendering (lines 129-161)', () => {
+    it('renders Points dropdown with all options', () => {
+      render(<TaskForm {...defaultProps} />)
+
+      const pointsSelect = screen.getByDisplayValue('10 points')
+      expect(pointsSelect).toBeInTheDocument()
+
+      expect(screen.getByRole('option', { name: '5 points' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '10 points' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '15 points' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '20 points' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '25 points' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '50 points' })).toBeInTheDocument()
+    })
+
+    it('renders Time of Day dropdown with all options', () => {
+      render(<TaskForm {...defaultProps} />)
+
+      expect(screen.getByRole('option', { name: 'Anytime' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Morning' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Afternoon' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Night' })).toBeInTheDocument()
+    })
+
+    it('renders Repeat dropdown with all options', () => {
+      render(<TaskForm {...defaultProps} />)
+
+      expect(screen.getByRole('option', { name: 'One time only' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Daily' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Weekly' })).toBeInTheDocument()
+    })
+
+    it('changes Points dropdown value', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Points Task')
+
+      // Change Points dropdown
+      const pointsSelect = screen.getByDisplayValue('10 points')
+      await userEvent.selectOptions(pointsSelect, '25')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ points: 25 }),
+          undefined
+        )
+      })
+    })
+
+    it('changes Time of Day dropdown value', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Time Task')
+
+      // Change Time of Day dropdown
+      const timeSelect = screen.getByDisplayValue('Anytime')
+      await userEvent.selectOptions(timeSelect, 'night')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ time_of_day: 'night' }),
+          undefined
+        )
+      })
+    })
+
+    it('changes Repeat dropdown to Weekly', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const titleInput = screen.getByPlaceholderText('e.g., Clean your room')
+      await userEvent.type(titleInput, 'Weekly Task')
+
+      const repeatSelect = screen.getByDisplayValue('One time only')
+      await userEvent.selectOptions(repeatSelect, 'weekly')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create Quest' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ recurring: 'weekly' }),
+          undefined
+        )
+      })
+    })
+  })
+
   describe('Common Behavior', () => {
     it('does not render when isOpen is false', () => {
       render(<TaskForm {...defaultProps} isOpen={false} />)
@@ -429,6 +546,89 @@ describe('TaskForm', () => {
       expect(screen.getByRole('option', { name: 'Anyone' })).toBeInTheDocument()
       expect(screen.getByRole('option', { name: 'Little T' })).toBeInTheDocument()
       expect(screen.getByRole('option', { name: 'Parent' })).toBeInTheDocument()
+    })
+  })
+
+  describe('Edit mode with null description (line 44 falsy branch)', () => {
+    it('pre-populates description as empty string when task.description is null', () => {
+      const taskNullDesc = { ...mockTask, description: null }
+      render(<TaskForm {...defaultProps} task={taskNullDesc} />)
+
+      const descInput = screen.getByPlaceholderText('Optional details...')
+      expect(descInput).toHaveValue('')
+    })
+  })
+
+  describe('Empty title guard (line 65)', () => {
+    it('does not call onSubmit when title is empty (programmatic form submit)', async () => {
+      const { fireEvent: fe } = await import('@testing-library/react')
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      // Programmatically submit form to bypass disabled button
+      const form = document.querySelector('form')!
+      fe.submit(form)
+
+      // handleSubmit should not be called because title.trim() is empty
+      expect(handleSubmit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Resetting dropdowns to empty (|| null branches)', () => {
+    it('changes Assign To back to Anyone (line 179 empty value → null)', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} task={mockTask} onSubmit={handleSubmit} />)
+
+      // assignedTo starts as 'user-1' from mockTask, change to empty
+      const assignSelect = screen.getByDisplayValue('Little T')
+      await userEvent.selectOptions(assignSelect, '')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ assigned_to: null }),
+          'task-1'
+        )
+      })
+    })
+
+    it('clears due time input (line 199 empty value → null)', async () => {
+      const { fireEvent: fe } = await import('@testing-library/react')
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      const taskWithTime = { ...mockTask, due_time: '14:30:00' }
+      render(<TaskForm {...defaultProps} task={taskWithTime} onSubmit={handleSubmit} />)
+
+      // Clear the due time input
+      const timeInput = screen.getByLabelText('Due Time (optional)')
+      fe.change(timeInput, { target: { value: '' } })
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ due_time: null }),
+          'task-1'
+        )
+      })
+    })
+
+    it('changes Repeat back to One time only (line 210 empty value → null)', async () => {
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} task={mockTask} onSubmit={handleSubmit} />)
+
+      // recurring starts as 'daily' from mockTask, change to empty
+      const repeatSelect = screen.getByDisplayValue('Daily')
+      await userEvent.selectOptions(repeatSelect, '')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(handleSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ recurring: null }),
+          'task-1'
+        )
+      })
     })
   })
 })

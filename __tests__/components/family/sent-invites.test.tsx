@@ -105,6 +105,22 @@ describe('SentInvites', () => {
     expect(pendingBadges).toHaveLength(2)
   })
 
+  it('handles null data from fetch (line 37 falsy branch)', async () => {
+    mockSelect.mockReturnValue({
+      eq: () => ({
+        eq: () => ({
+          order: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+    })
+
+    const { container } = render(<SentInvites familyId="family-1" />)
+
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull()
+    })
+  })
+
   it('renders nothing on error', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
     mockSelect.mockReturnValue({
@@ -118,6 +134,8 @@ describe('SentInvites', () => {
     const { container } = render(<SentInvites familyId="family-1" />)
 
     await waitFor(() => {
+      // Ensure the async error path has executed before restoring the spy
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch sent invites:', { message: 'Query error' })
       // On error, invites stay empty so component returns null
       expect(container.firstChild).toBeNull()
     })
