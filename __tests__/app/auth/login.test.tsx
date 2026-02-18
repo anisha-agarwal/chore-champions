@@ -109,6 +109,17 @@ describe('Login Page', () => {
     expect(await screen.findByText(/facebook login failed/i)).toBeInTheDocument()
   })
 
+  it('shows error when signInWithPassword fails', async () => {
+    mockSignInWithPassword.mockResolvedValue({ error: { message: 'Invalid credentials' } })
+    render(<LoginPage />)
+
+    await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com')
+    await userEvent.type(screen.getByLabelText(/password/i), 'wrongpassword')
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument()
+  })
+
   it('calls signInWithPassword on form submit', async () => {
     mockSignInWithPassword.mockResolvedValue({ error: null })
     render(<LoginPage />)

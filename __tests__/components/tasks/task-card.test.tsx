@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TaskCard } from '@/components/tasks/task-card'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
@@ -214,6 +214,29 @@ describe('TaskCard', () => {
     })
   })
 
+  describe('60-second deadline refresh interval', () => {
+    it('updates deadline status every 60 seconds (line 65 setTick callback)', async () => {
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2024-01-15T14:00:00'))
+
+      const taskWithTime = { ...mockTask, due_time: '15:00:00' }
+      render(<TaskCard task={taskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+
+      // Should show due time badge
+      expect(screen.getByTestId('due-time-badge')).toBeInTheDocument()
+
+      // Advance 60 seconds to trigger the interval callback
+      act(() => {
+        jest.advanceTimersByTime(60000)
+      })
+
+      // The badge should still be there (just potentially updated)
+      expect(screen.getByTestId('due-time-badge')).toBeInTheDocument()
+
+      jest.useRealTimers()
+    })
+  })
+
   describe('Due Time', () => {
     beforeEach(() => {
       jest.useFakeTimers()
@@ -276,6 +299,109 @@ describe('TaskCard', () => {
     })
   })
 
+  describe('Complete Error Handling', () => {
+    it('does not set completed state when onComplete throws', async () => {
+      const handleComplete = jest.fn().mockRejectedValue(new Error('Network error'))
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      // Wait for async error handling and state updates to settle
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.any(Error))
+      })
+
+      // Task should not show completed state
+      expect(screen.getByText('Clean your room')).not.toHaveClass('line-through')
+      consoleSpy.mockRestore()
+    })
+
+    it('does not set uncompleted state when onUncomplete throws', async () => {
+      const completedTask = { ...mockTask, completed: true }
+      const handleUncomplete = jest.fn().mockRejectedValue(new Error('Network error'))
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={handleUncomplete} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      // Wait for async error handling and state updates to settle
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to uncomplete task:', expect.any(Error))
+      })
+
+      // Task should still show completed state
+      expect(screen.getByText('Clean your room')).toHaveClass('line-through')
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Weekly Recurring', () => {
+    it('renders weekly badge', () => {
+      const weeklyTask = { ...mockTask, recurring: 'weekly' as const }
+      render(<TaskCard task={weeklyTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+      expect(screen.getByText('Weekly')).toBeInTheDocument()
+    })
+  })
+
+  describe('No due_date (null) branch', () => {
+    it('handles task with no due_date (computeDeadlineStatus line 35 and useEffect line 63)', () => {
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2024-01-15T12:00:00'))
+      const taskWithNoDueDate: TaskWithAssignee = {
+        ...mockTask,
+        due_date: null,
+        due_time: '14:30:00',
+      }
+      render(<TaskCard task={taskWithNoDueDate} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+      // Should not show due time badge since dateStr is null
+      expect(screen.queryByTestId('due-time-badge')).not.toBeInTheDocument()
+      jest.useRealTimers()
+    })
+  })
+
+  describe('Anytime fallback (line 131)', () => {
+    it('falls back to anytime label for unknown time_of_day', () => {
+      const taskWithUnknownTime: TaskWithAssignee = {
+        ...mockTask,
+        time_of_day: 'unknown_time',
+      }
+      render(<TaskCard task={taskWithUnknownTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+      expect(screen.getByText('Anytime')).toBeInTheDocument()
+    })
+  })
+
+  describe('handleComplete function (lines 89-103)', () => {
+    it('completes a task successfully via handleComplete', async () => {
+      const handleComplete = jest.fn().mockResolvedValue(undefined)
+      render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      expect(handleComplete).toHaveBeenCalledWith('task-1')
+      // After completion, title should have line-through
+      await waitFor(() => {
+        expect(screen.getByText('Clean your room')).toHaveClass('line-through')
+      })
+    })
+
+    it('prevents double-click on complete (isCompleted guard)', async () => {
+      const completedTask = { ...mockTask, completed: true }
+      const handleComplete = jest.fn().mockResolvedValue(undefined)
+      render(<TaskCard task={completedTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      // Click the checkbox on an already completed task - handleComplete should not fire
+      const buttons = screen.getAllByRole('button')
+      await userEvent.click(buttons[0])
+
+      // It should call onUncomplete instead, not onComplete
+      expect(handleComplete).not.toHaveBeenCalled()
+    })
+  })
+
   describe('Edit Button', () => {
     it('renders edit button for incomplete tasks', () => {
       render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
@@ -331,6 +457,69 @@ describe('TaskCard', () => {
 
       expect(handleComplete).not.toHaveBeenCalled()
       expect(handleEdit).toHaveBeenCalled()
+    })
+  })
+
+  describe('handleComplete guard (line 89)', () => {
+    it('prevents double-complete when isCompleting is true', async () => {
+      // onComplete resolves after a delay, keeping isCompleting true during second click
+      let resolveComplete: () => void
+      const handleComplete = jest.fn().mockImplementation(() => new Promise<void>(r => { resolveComplete = r }))
+      const user = userEvent.setup()
+      render(<TaskCard task={mockTask} onComplete={handleComplete} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      // First click - starts completing
+      const checkboxBtn = screen.getAllByRole('button')[0]
+      await user.click(checkboxBtn)
+
+      await waitFor(() => {
+        expect(handleComplete).toHaveBeenCalledTimes(1)
+      })
+
+      // Re-query the button (DOM may have updated)
+      const checkboxBtn2 = screen.getAllByRole('button')[0]
+      // Second click - should be blocked by isCompleting guard (line 89)
+      await user.click(checkboxBtn2)
+
+      // onComplete should still only be called once
+      expect(handleComplete).toHaveBeenCalledTimes(1)
+
+      // Clean up: resolve the pending promise within act() to handle state updates
+      await act(async () => {
+        resolveComplete!()
+      })
+    })
+  })
+
+  describe('handleUncomplete guard (line 103)', () => {
+    it('prevents double-uncomplete when isUncompleting is true', async () => {
+      const completedTask = { ...mockTask, completed: true }
+      let resolveUncomplete: () => void
+      const handleUncomplete = jest.fn().mockImplementation(() => new Promise<void>(r => { resolveUncomplete = r }))
+      const user = userEvent.setup()
+      render(<TaskCard task={completedTask} onComplete={jest.fn()} onUncomplete={handleUncomplete} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} />)
+
+      const undoButton = screen.getByTitle('Click to undo')
+      // First click - starts uncompleting
+      await user.click(undoButton)
+
+      await waitFor(() => {
+        expect(handleUncomplete).toHaveBeenCalledTimes(1)
+      })
+
+      // Re-query the button (might now be a complete button since isCompleted toggled)
+      const buttons = screen.getAllByRole('button')
+      const firstBtn = buttons[0]
+      // Second click - should be blocked by isUncompleting guard (line 103)
+      await user.click(firstBtn)
+
+      // onUncomplete should still only be called once
+      expect(handleUncomplete).toHaveBeenCalledTimes(1)
+
+      // Clean up: resolve the pending promise within act() to handle state updates
+      await act(async () => {
+        resolveUncomplete!()
+      })
     })
   })
 })

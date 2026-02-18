@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { InviteModal } from '@/components/family/invite-modal'
 
@@ -28,6 +28,11 @@ describe('InviteModal', () => {
     jest.clearAllMocks()
   })
 
+  afterEach(() => {
+    // Always restore real timers in case a test used fake timers
+    jest.useRealTimers()
+  })
+
   it('renders both tabs', () => {
     render(<InviteModal {...defaultProps} />)
 
@@ -43,9 +48,10 @@ describe('InviteModal', () => {
   })
 
   it('switches to email tab when clicked', async () => {
+    const user = userEvent.setup()
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
+    await user.click(screen.getByText('Invite by Email'))
 
     expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send Invite' })).toBeInTheDocument()
@@ -53,12 +59,13 @@ describe('InviteModal', () => {
 
   it('shows error when user not found', async () => {
     mockRpc.mockResolvedValue({ data: [], error: null })
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'nobody@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'nobody@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('No account found with that email address.')).toBeInTheDocument()
@@ -70,12 +77,13 @@ describe('InviteModal', () => {
       data: [{ user_id: 'user-2', display_name: 'Other User', avatar_url: null, has_family: true }],
       error: null,
     })
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'taken@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'taken@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('This user is already in a family.')).toBeInTheDocument()
@@ -88,12 +96,13 @@ describe('InviteModal', () => {
       error: null,
     })
     mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate' } })
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'duplicate@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'duplicate@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('An invite is already pending for this user.')).toBeInTheDocument()
@@ -105,12 +114,13 @@ describe('InviteModal', () => {
       data: [{ user_id: 'user-1', display_name: 'Me', avatar_url: null, has_family: false }],
       error: null,
     })
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'me@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'me@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('You cannot invite yourself.')).toBeInTheDocument()
@@ -123,12 +133,13 @@ describe('InviteModal', () => {
       error: null,
     })
     mockInsert.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'jane@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'jane@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('Invite sent to Jane!')).toBeInTheDocument()
@@ -138,16 +149,264 @@ describe('InviteModal', () => {
   it('disables button during submission', async () => {
     // Make RPC hang to test loading state
     mockRpc.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
 
     render(<InviteModal {...defaultProps} />)
 
-    await userEvent.click(screen.getByText('Invite by Email'))
-    await userEvent.type(screen.getByLabelText('Email Address'), 'test@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send Invite' }))
+    await user.click(screen.getByText('Invite by Email'))
+    await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }))
 
     await waitFor(() => {
       expect(screen.getByText('Sending...')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Sending...' })).toBeDisabled()
+    })
+  })
+
+  describe('copyToClipboard', () => {
+    let writeTextMock: jest.Mock
+
+    beforeEach(() => {
+      writeTextMock = jest.fn().mockResolvedValue(undefined)
+      // JSDOM doesn't have clipboard API - define it on the global navigator
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: { writeText: writeTextMock },
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    it('copies invite code to clipboard and shows Copied!', async () => {
+      render(<InviteModal {...defaultProps} />)
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy' })
+      fireEvent.click(copyButtons[0])
+
+      await waitFor(() => {
+        expect(writeTextMock).toHaveBeenCalledWith('ABC123')
+        expect(screen.getByText('Copied!')).toBeInTheDocument()
+      })
+    })
+
+    it('resets Copied! state after 2 seconds (line 36 setTimeout callback)', async () => {
+      jest.useFakeTimers()
+
+      render(<InviteModal {...defaultProps} />)
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy' })
+      fireEvent.click(copyButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Copied!')).toBeInTheDocument()
+      })
+
+      // Advance past the 2000ms timeout
+      act(() => {
+        jest.advanceTimersByTime(2100)
+      })
+
+      await waitFor(() => {
+        // Should show "Copy" again
+        expect(screen.queryByText('Copied!')).not.toBeInTheDocument()
+      })
+
+      jest.useRealTimers()
+    })
+
+    it('copies invite link to clipboard', async () => {
+      render(<InviteModal {...defaultProps} />)
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy' })
+      fireEvent.click(copyButtons[1])
+
+      await waitFor(() => {
+        expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining('/join/ABC123'))
+      })
+    })
+
+    it('handles clipboard failure gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      writeTextMock.mockRejectedValue(new Error('Clipboard denied'))
+
+      render(<InviteModal {...defaultProps} />)
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy' })
+      fireEvent.click(copyButtons[0])
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to copy:', expect.any(Error))
+      })
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('handleSendInvite edge cases', () => {
+    it('does not call RPC when email is empty', async () => {
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByText('Invite by Email'))
+
+      // The email input is required, so form won't submit with empty email
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('shows RPC error', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'RPC failed' } })
+      const user = userEvent.setup()
+
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByText('Invite by Email'))
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
+      await user.click(screen.getByRole('button', { name: 'Send Invite' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to look up user. Please try again.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows generic insert error (non-23505)', async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ user_id: 'user-2', display_name: 'Other', avatar_url: null, has_family: false }],
+        error: null,
+      })
+      mockInsert.mockResolvedValue({ error: { code: '42000', message: 'Some other error' } })
+      const user = userEvent.setup()
+
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByText('Invite by Email'))
+      await user.type(screen.getByLabelText('Email Address'), 'other@example.com')
+      await user.click(screen.getByRole('button', { name: 'Send Invite' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to send invite. Please try again.')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('handleClose', () => {
+    it('Done button calls onClose', async () => {
+      const onClose = jest.fn()
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} onClose={onClose} />)
+
+      const doneButton = screen.getByRole('button', { name: 'Done' })
+      await user.click(doneButton)
+
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('handleClose resets active tab to code', async () => {
+      const onClose = jest.fn()
+      const user = userEvent.setup()
+      const { rerender } = render(<InviteModal {...defaultProps} onClose={onClose} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Click the modal's X close button which calls handleClose
+      // The X button is inside the modal header
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      expect(onClose).toHaveBeenCalled()
+
+      // Re-render with isOpen=true to verify tab was reset to 'code'
+      rerender(<InviteModal {...defaultProps} isOpen={true} onClose={onClose} />)
+
+      // The Share Code tab should be active again (setActiveTab('code') was called in handleClose)
+      expect(screen.getByRole('tab', { name: 'Share Code' })).toHaveAttribute('aria-selected', 'true')
+    })
+  })
+
+  describe('clicking Share Code tab (line 125)', () => {
+    it('switches back to Share Code tab from Email tab', async () => {
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Switch back to code tab by clicking "Share Code"
+      await user.click(screen.getByText('Share Code'))
+
+      // Should show code tab content
+      expect(screen.getByText('Invite Code')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Email Address')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('handleClose resets state on Done click from email tab', () => {
+    it('resets tab back to code when Done/close is called while on email tab', async () => {
+      const onClose = jest.fn()
+      const user = userEvent.setup()
+      const { rerender } = render(<InviteModal {...defaultProps} onClose={onClose} />)
+
+      // Switch to email tab
+      await user.click(screen.getByText('Invite by Email'))
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+
+      // Type something in the email field
+      await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
+
+      // Close via backdrop (triggers handleClose which resets email, emailError, emailSuccess, and activeTab)
+      const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement
+      await user.click(backdrop)
+
+      expect(onClose).toHaveBeenCalled()
+
+      // Re-open modal
+      rerender(<InviteModal {...defaultProps} isOpen={true} onClose={onClose} />)
+
+      // Tab should be reset to code (setActiveTab('code') in handleClose)
+      expect(screen.getByRole('tab', { name: 'Share Code' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('Invite Code')).toBeInTheDocument()
+    })
+  })
+
+  describe('handleSendInvite empty email guard (line 44)', () => {
+    it('does nothing when email is empty (programmatic form submit)', async () => {
+      const { fireEvent: fe } = await import('@testing-library/react')
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByText('Invite by Email'))
+
+      // Programmatically submit form to bypass HTML required validation
+      const form = document.querySelector('form')!
+      fe.submit(form)
+
+      // RPC should not be called since email is empty
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('tab aria attributes', () => {
+    it('Share Code tab is aria-selected by default', () => {
+      render(<InviteModal {...defaultProps} />)
+
+      const codeTab = screen.getByRole('tab', { name: 'Share Code' })
+      expect(codeTab).toHaveAttribute('aria-selected', 'true')
+
+      const emailTab = screen.getByRole('tab', { name: 'Invite by Email' })
+      expect(emailTab).toHaveAttribute('aria-selected', 'false')
+    })
+
+    it('Email tab becomes aria-selected when clicked', async () => {
+      const user = userEvent.setup()
+      render(<InviteModal {...defaultProps} />)
+
+      await user.click(screen.getByRole('tab', { name: 'Invite by Email' }))
+
+      const codeTab = screen.getByRole('tab', { name: 'Share Code' })
+      expect(codeTab).toHaveAttribute('aria-selected', 'false')
+
+      const emailTab = screen.getByRole('tab', { name: 'Invite by Email' })
+      expect(emailTab).toHaveAttribute('aria-selected', 'true')
     })
   })
 })

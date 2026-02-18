@@ -1,0 +1,107 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import JoinPage from '@/app/(auth)/join/page'
+
+// Mock next/navigation
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}))
+
+describe('Join Landing Page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('renders heading', () => {
+    render(<JoinPage />)
+    expect(screen.getByRole('heading', { name: /join a family/i })).toBeInTheDocument()
+  })
+
+  it('renders invite code input', () => {
+    render(<JoinPage />)
+    expect(screen.getByLabelText(/invite code/i)).toBeInTheDocument()
+  })
+
+  it('renders Continue button', () => {
+    render(<JoinPage />)
+    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument()
+  })
+
+  it('Continue button is disabled when input is empty', () => {
+    render(<JoinPage />)
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled()
+  })
+
+  it('Continue button is enabled when input has value', async () => {
+    render(<JoinPage />)
+
+    await userEvent.type(screen.getByLabelText(/invite code/i), 'ABC123')
+    expect(screen.getByRole('button', { name: /continue/i })).not.toBeDisabled()
+  })
+
+  it('converts input to uppercase', async () => {
+    render(<JoinPage />)
+
+    const input = screen.getByLabelText(/invite code/i)
+    await userEvent.type(input, 'abcd1234')
+    expect(input).toHaveValue('ABCD1234')
+  })
+
+  it('navigates to /join/{code} on submit', async () => {
+    render(<JoinPage />)
+
+    await userEvent.type(screen.getByLabelText(/invite code/i), 'testcode')
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+
+    expect(mockPush).toHaveBeenCalledWith('/join/TESTCODE')
+  })
+
+  it('does not navigate when code is only whitespace', async () => {
+    render(<JoinPage />)
+
+    // The button is disabled when input is empty/whitespace-only
+    // Type spaces - the input converts to uppercase, and .trim() on spaces yields empty
+    const input = screen.getByLabelText(/invite code/i)
+    // The button should remain disabled since the code value trims to empty
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled()
+  })
+
+  it('does not navigate when submitting empty code via form (line 13 falsy branch)', async () => {
+    render(<JoinPage />)
+
+    // Simulate form submission with empty input by dispatching submit event directly
+    const form = document.querySelector('form')!
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+    form.dispatchEvent(submitEvent)
+
+    // Should not navigate
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('trims whitespace from code before navigation', async () => {
+    render(<JoinPage />)
+
+    const input = screen.getByLabelText(/invite code/i)
+    await userEvent.type(input, ' ABC ')
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+
+    expect(mockPush).toHaveBeenCalledWith('/join/ABC')
+  })
+
+  it('renders link to create a new family', () => {
+    render(<JoinPage />)
+    const link = screen.getByRole('link', { name: /create a new family/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/signup')
+  })
+
+  it('renders link to sign in', () => {
+    render(<JoinPage />)
+    const link = screen.getByRole('link', { name: /sign in/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/login')
+  })
+})

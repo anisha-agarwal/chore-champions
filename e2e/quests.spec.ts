@@ -502,6 +502,72 @@ test.describe('Quests Page', () => {
     await expect(taskCard.locator('[data-testid="due-time-badge"]')).not.toBeVisible()
   })
 
+  test('create task with specific point value', async ({ page }) => {
+    const taskName = `Test Points Value ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Click FAB to open form
+    const fab = page.locator('button.fixed.bg-purple-600')
+    await fab.click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+
+    // Fill in task name
+    await page.getByPlaceholder(/clean your room/i).fill(taskName)
+
+    // Select 25 points
+    const pointsSelect = page.locator('select').first()
+    await pointsSelect.selectOption('25')
+
+    // Submit
+    await page.getByRole('button', { name: /create quest/i }).click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
+
+    // Verify the task shows 25 pts
+    const taskCard = page.locator('.bg-white.rounded-xl').filter({ hasText: taskName })
+    await expect(taskCard.getByText('25 pts')).toBeVisible()
+  })
+
+  test('create task assigned to specific member', async ({ page }) => {
+    const taskName = `Test Assign Member ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Open the form to check available members
+    const fab = page.locator('button.fixed.bg-purple-600')
+    await fab.click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+
+    // Get the assign dropdown and check for members
+    const assignSelect = page.locator('select').nth(2)
+    const options = assignSelect.locator('option')
+    const optionCount = await options.count()
+
+    if (optionCount <= 1) {
+      // No family members to assign to - close and skip
+      await page.locator('.fixed.inset-0.z-50 button').first().click()
+      return
+    }
+
+    // Get the second option (first member after "Anyone")
+    const memberName = await options.nth(1).textContent()
+
+    // Fill in task name
+    await page.getByPlaceholder(/clean your room/i).fill(taskName)
+
+    // Select the member
+    await assignSelect.selectOption({ index: 1 })
+
+    // Submit
+    await page.getByRole('button', { name: /create quest/i }).click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
+
+    // Verify the task has an avatar with the member's name as title
+    const taskCard = page.locator('.bg-white.rounded-xl').filter({ hasText: taskName })
+    const avatar = taskCard.locator('div.rounded-full[title]')
+    await expect(avatar).toHaveAttribute('title', memberName!)
+  })
+
   test('time filter filters tasks', async ({ page }) => {
     // Look for time filter buttons
     const morningFilter = page.getByRole('button', { name: /morning/i })

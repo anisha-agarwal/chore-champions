@@ -157,6 +157,31 @@ test.describe('Family Page', () => {
     }
   })
 
+  test('remove member modal has correct content and buttons', async ({ page }) => {
+    const removeButton = page.getByTitle('Remove member').first()
+
+    if (await removeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await removeButton.click()
+
+      // Modal should show
+      await expect(page.getByRole('heading', { name: /remove family member/i })).toBeVisible()
+
+      // Should have both Cancel and Remove buttons
+      const cancelButton = page.getByRole('button', { name: 'Cancel' })
+      const removeConfirm = page.getByRole('button', { name: 'Remove', exact: true })
+
+      await expect(cancelButton).toBeVisible()
+      await expect(removeConfirm).toBeVisible()
+
+      // Remove button should not be disabled initially
+      await expect(removeConfirm).not.toBeDisabled()
+
+      // Cancel to close
+      await cancelButton.click()
+      await expect(page.getByRole('heading', { name: /remove family member/i })).not.toBeVisible()
+    }
+  })
+
   test('invite code works case-insensitively', async ({ page, context }) => {
     // Open invite modal to get the code
     await page.getByRole('button', { name: 'Invite' }).click()

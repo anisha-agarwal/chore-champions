@@ -79,4 +79,58 @@ describe('UnderlineInput', () => {
 
     expect(screen.getByDisplayValue('John Doe')).toBeInTheDocument()
   })
+
+  it('expands underline on focus', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<UnderlineInput label="Name" value="" onChange={() => {}} />)
+
+    const input = screen.getByRole('textbox')
+    await user.click(input)
+
+    // The animated underline div should have w-full class when focused
+    const underline = container.querySelector('.bg-purple-600')
+    expect(underline).toHaveClass('w-full')
+  })
+
+  it('collapses underline on blur', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<UnderlineInput label="Name" value="" onChange={() => {}} />)
+
+    const input = screen.getByRole('textbox')
+    await user.click(input)
+    await user.tab() // blur
+
+    const underline = container.querySelector('.bg-purple-600')
+    expect(underline).toHaveClass('w-0')
+  })
+
+  it('calls provided onFocus handler', async () => {
+    const handleFocus = jest.fn()
+    const user = userEvent.setup()
+    render(<UnderlineInput label="Name" value="" onChange={() => {}} onFocus={handleFocus} />)
+
+    const input = screen.getByRole('textbox')
+    await user.click(input)
+
+    expect(handleFocus).toHaveBeenCalled()
+  })
+
+  it('calls provided onBlur handler', async () => {
+    const handleBlur = jest.fn()
+    const user = userEvent.setup()
+    render(<UnderlineInput label="Name" value="" onChange={() => {}} onBlur={handleBlur} />)
+
+    const input = screen.getByRole('textbox')
+    await user.click(input)
+    await user.tab()
+
+    expect(handleBlur).toHaveBeenCalled()
+  })
+
+  it('passes type prop through', () => {
+    render(<UnderlineInput label="Password" value="" onChange={() => {}} type="password" />)
+
+    const input = screen.getByLabelText('Password')
+    expect(input).toHaveAttribute('type', 'password')
+  })
 })

@@ -113,6 +113,18 @@ describe('Signup Page', () => {
     expect(await screen.findByText(/facebook signup failed/i)).toBeInTheDocument()
   })
 
+  it('shows error when signUp fails', async () => {
+    mockSignUp.mockResolvedValue({ error: { message: 'Email already registered' } })
+    render(<SignupPage />)
+
+    await userEvent.type(screen.getByLabelText(/display name/i), 'Test User')
+    await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com')
+    await userEvent.type(screen.getByLabelText(/password/i), 'password123')
+    await userEvent.click(screen.getByRole('button', { name: /create account/i }))
+
+    expect(await screen.findByText(/email already registered/i)).toBeInTheDocument()
+  })
+
   it('calls signUp with default child role on form submit', async () => {
     mockSignUp.mockResolvedValue({ error: null })
     render(<SignupPage />)
