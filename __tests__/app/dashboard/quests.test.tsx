@@ -17,6 +17,12 @@ jest.mock('next/image', () => ({
   default: (props: { alt: string; src: string }) => <img alt={props.alt} src={props.src} />,
 }))
 
+// Mock useEncouragement hook
+const mockShowEncouragement = jest.fn()
+jest.mock('@/lib/hooks/use-encouragement', () => ({
+  useEncouragement: () => ({ showEncouragement: mockShowEncouragement }),
+}))
+
 // Mock data
 const mockUser = { id: 'user-1', email: 'test@example.com' }
 const mockProfile = {
@@ -165,6 +171,7 @@ jest.mock('@/lib/supabase/client', () => ({
 describe('QuestsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockShowEncouragement.mockClear()
     mockGetUser.mockResolvedValue({ data: { user: mockUser } })
     mockInsert.mockResolvedValue({ error: null })
     mockUpdate.mockResolvedValue({ error: null })
