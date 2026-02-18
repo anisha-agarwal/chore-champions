@@ -201,6 +201,39 @@ describe('POST /api/ai/encouragement', () => {
     expect(data.message).toBeNull()
   })
 
+  it('aborts fetch when timeout fires', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+
+    // Make setTimeout fire immediately so the abort signal triggers
+    const originalSetTimeout = global.setTimeout
+    global.setTimeout = ((fn: () => void) => originalSetTimeout(fn, 0)) as typeof global.setTimeout
+
+    // Make fetch reject with AbortError when signal is aborted
+    global.fetch = jest.fn().mockImplementation((_url: string, options: { signal: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        if (options.signal.aborted) {
+          reject(new DOMException('The operation was aborted', 'AbortError'))
+          return
+        }
+        options.signal.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted', 'AbortError'))
+        })
+      })
+    })
+
+    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validContext),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+    expect(data.message).toBeNull()
+
+    global.setTimeout = originalSetTimeout
+  })
+
   it('returns { message: null } when AI response has empty content', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
 

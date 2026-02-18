@@ -192,6 +192,30 @@ describe('useEncouragement', () => {
     }))
   })
 
+  it('evicts oldest message when tracking more than 5', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ message: null }),
+    })
+
+    const { result } = renderHook(() => useEncouragement())
+
+    // Call showEncouragement 6 times to trigger the shift() on the 6th call
+    for (let i = 0; i < 6; i++) {
+      await act(async () => {
+        await result.current.showEncouragement({
+          task: mockTask,
+          pointsEarned: 10,
+          currentUser: mockUser,
+          tasks: mockTasks,
+        })
+      })
+    }
+
+    // All 6 calls should have shown a toast (fallback since message is null)
+    expect(toast).toHaveBeenCalledTimes(6)
+  })
+
   it('uses display_name when nickname is null', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
