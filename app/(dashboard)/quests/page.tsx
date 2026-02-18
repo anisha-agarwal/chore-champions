@@ -10,6 +10,7 @@ import { MemberFilter } from '@/components/family/member-filter'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { toDateString, combineDateAndTime } from '@/lib/utils'
+import { useEncouragement } from '@/lib/hooks/use-encouragement'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
 
 export default function QuestsPage() {
@@ -25,6 +26,7 @@ export default function QuestsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const { showEncouragement } = useEncouragement()
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -301,6 +303,8 @@ export default function QuestsPage() {
       })
 
     if (completionError) throw completionError
+
+    showEncouragement({ task, pointsEarned, currentUser: currentUser!, tasks })
 
     fetchData()
   }

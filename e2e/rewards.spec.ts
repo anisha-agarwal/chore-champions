@@ -70,7 +70,7 @@ test.describe('Rewards Page', () => {
 
   test('displays gift icon in rewards section', async ({ page }) => {
     // The rewards section has a gift icon (svg)
-    const rewardsSection = page.locator('section').last()
+    const rewardsSection = page.locator('section').filter({ hasText: 'Available Rewards' })
     const icon = rewardsSection.locator('svg')
     await expect(icon).toBeVisible()
   })
