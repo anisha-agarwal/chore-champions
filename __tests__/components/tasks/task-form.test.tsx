@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TaskForm } from '@/components/tasks/task-form'
 import type { TaskWithAssignee, Profile } from '@/lib/types'
+
+// Store original fetch
+const originalFetch = global.fetch
 
 const mockFamilyMembers: Profile[] = [
   {
@@ -59,6 +62,10 @@ const defaultProps = {
 describe('TaskForm', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
   })
 
   describe('Create Mode', () => {
@@ -594,14 +601,13 @@ describe('TaskForm', () => {
     })
 
     it('clears due time input (line 199 empty value → null)', async () => {
-      const { fireEvent: fe } = await import('@testing-library/react')
       const handleSubmit = jest.fn().mockResolvedValue(undefined)
       const taskWithTime = { ...mockTask, due_time: '14:30:00' }
       render(<TaskForm {...defaultProps} task={taskWithTime} onSubmit={handleSubmit} />)
 
       // Clear the due time input
       const timeInput = screen.getByLabelText('Due Time (optional)')
-      fe.change(timeInput, { target: { value: '' } })
+      fireEvent.change(timeInput, { target: { value: '' } })
 
       await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
 
@@ -629,6 +635,294 @@ describe('TaskForm', () => {
           'task-1'
         )
       })
+    })
+  })
+
+  describe('Natural Language Input', () => {
+    it('is not rendered in edit mode', () => {
+      render(<TaskForm {...defaultProps} task={mockTask} />)
+      expect(screen.queryByTestId('nl-input-section')).not.toBeInTheDocument()
+    })
+
+    it('is rendered in create mode', () => {
+      render(<TaskForm {...defaultProps} />)
+      expect(screen.getByTestId('nl-input-section')).toBeInTheDocument()
+      expect(screen.getByLabelText('Describe the quest')).toBeInTheDocument()
+    })
+
+    it('has Fill button disabled when input is empty', () => {
+      render(<TaskForm {...defaultProps} />)
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      expect(fillButton).toBeDisabled()
+    })
+
+    it('enables Fill button when input has text', async () => {
+      render(<TaskForm {...defaultProps} />)
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Make bed for Sarah')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      expect(fillButton).not.toBeDisabled()
+    })
+
+    it('calls fetch on Fill button click and pre-fills form', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          prefill: {
+            title: 'Make bed',
+            description: 'Make the bed every morning',
+            points: 5,
+            time_of_day: 'morning',
+            recurring: 'daily',
+            assigned_to: 'user-1',
+          },
+        }),
+      })
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Daily quest for Sarah to make her bed')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/ai/parse-quest', expect.objectContaining({
+          method: 'POST',
+        }))
+      })
+
+      await waitFor(() => {
+        // Check form was pre-filled
+        expect(screen.getByPlaceholderText('e.g., Clean your room')).toHaveValue('Make bed')
+        expect(screen.getByPlaceholderText('Optional details...')).toHaveValue('Make the bed every morning')
+        expect(screen.getByDisplayValue('5 points')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('Morning')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('Daily')).toBeInTheDocument()
+      })
+    })
+
+    it('calls fetch on Enter key press', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          prefill: {
+            title: 'Test quest',
+            description: '',
+            points: 10,
+            time_of_day: 'anytime',
+            recurring: null,
+            assigned_to: null,
+          },
+        }),
+      })
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Test quest')
+      await userEvent.keyboard('{Enter}')
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/ai/parse-quest', expect.any(Object))
+      })
+    })
+
+    it('shows error when prefill is null', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ prefill: null }),
+      })
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Something')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Could not parse quest. Please fill the form manually.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error when fetch fails', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'))
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Something')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Could not parse quest. Please fill the form manually.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error when response is not ok', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      })
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Something')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Could not parse quest. Please fill the form manually.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows confirmation hint after successful pre-fill', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          prefill: {
+            title: 'Test',
+            description: '',
+            points: 10,
+            time_of_day: 'anytime',
+            recurring: null,
+            assigned_to: null,
+          },
+        }),
+      })
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Test quest')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Form pre-filled! Review and submit below.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows "Parsing..." text while loading', async () => {
+      global.fetch = jest.fn().mockImplementation(() => new Promise(() => {}))
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Test quest')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      expect(screen.getByRole('button', { name: 'Parsing...' })).toBeInTheDocument()
+    })
+
+    it('disables NL input while loading', async () => {
+      global.fetch = jest.fn().mockImplementation(() => new Promise(() => {}))
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Test quest')
+
+      const fillButton = screen.getByRole('button', { name: 'Fill' })
+      await userEvent.click(fillButton)
+
+      expect(nlInput).toBeDisabled()
+    })
+
+    it('resets NL state when switching from create to edit mode', () => {
+      const { rerender } = render(<TaskForm {...defaultProps} />)
+
+      // NL section should be visible in create mode
+      expect(screen.getByTestId('nl-input-section')).toBeInTheDocument()
+
+      // Switch to edit mode
+      rerender(<TaskForm {...defaultProps} task={mockTask} />)
+
+      // NL section should not be visible in edit mode
+      expect(screen.queryByTestId('nl-input-section')).not.toBeInTheDocument()
+    })
+
+    it('does not call fetch when Enter is pressed with empty input', async () => {
+      global.fetch = jest.fn()
+
+      render(<TaskForm {...defaultProps} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      fireEvent.keyDown(nlInput, { key: 'Enter' })
+
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('does not submit the form when Enter is pressed in NL input', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          prefill: {
+            title: 'Test',
+            description: '',
+            points: 10,
+            time_of_day: 'anytime',
+            recurring: null,
+            assigned_to: null,
+          },
+        }),
+      })
+
+      const handleSubmit = jest.fn().mockResolvedValue(undefined)
+      render(<TaskForm {...defaultProps} onSubmit={handleSubmit} />)
+
+      const nlInput = screen.getByLabelText('Describe the quest')
+      await userEvent.type(nlInput, 'Test quest')
+      await userEvent.keyboard('{Enter}')
+
+      // fetch should be called for NL parsing, but form should not be submitted
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled()
+      })
+      expect(handleSubmit).not.toHaveBeenCalled()
+    })
+
+    it('resets NL input when form is closed and reopened', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          prefill: {
+            title: 'Parsed Quest',
+            description: '',
+            points: 10,
+            time_of_day: 'anytime',
+            recurring: null,
+            assigned_to: null,
+          },
+        }),
+      })
+
+      const { rerender } = render(<TaskForm {...defaultProps} isOpen={true} />)
+
+      // Type into NL input and parse
+      const nlInput = screen.getByLabelText('Describe the quest')
+      fireEvent.change(nlInput, { target: { value: 'Some quest' } })
+      expect(nlInput).toHaveValue('Some quest')
+
+      // Close the form
+      rerender(<TaskForm {...defaultProps} isOpen={false} />)
+
+      // Reopen the form
+      rerender(<TaskForm {...defaultProps} isOpen={true} />)
+
+      // NL input should be empty
+      expect(screen.getByLabelText('Describe the quest')).toHaveValue('')
     })
   })
 })

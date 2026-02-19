@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { toDateString, toTimeString } from '@/lib/utils'
 import { TIME_OF_DAY_OPTIONS, type Profile, type TaskWithAssignee } from '@/lib/types'
+import type { ParseQuestResponse } from '@/lib/parse-quest'
 
 interface TaskFormProps {
   isOpen: boolean
@@ -34,6 +35,10 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
   const [dueTime, setDueTime] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nlInput, setNlInput] = useState('')
+  const [nlLoading, setNlLoading] = useState(false)
+  const [nlError, setNlError] = useState<string | null>(null)
+  const [nlSuccess, setNlSuccess] = useState(false)
 
   const isEditMode = !!task
 
@@ -58,7 +63,52 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
       setAssignedTo(null)
       setDueTime(null)
     }
-  }, [task])
+    // Reset NL state when form opens/closes
+    setNlInput('')
+    setNlLoading(false)
+    setNlError(null)
+    setNlSuccess(false)
+  }, [task, isOpen])
+
+  async function handleNlParse() {
+    if (!nlInput.trim() || nlLoading) return
+
+    setNlLoading(true)
+    setNlError(null)
+    setNlSuccess(false)
+
+    try {
+      const response = await fetch('/api/ai/parse-quest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: nlInput.trim() }),
+      })
+
+      if (!response.ok) {
+        setNlError('Could not parse quest. Please fill the form manually.')
+        return
+      }
+
+      const data: ParseQuestResponse = await response.json()
+
+      if (!data.prefill) {
+        setNlError('Could not parse quest. Please fill the form manually.')
+        return
+      }
+
+      setTitle(data.prefill.title)
+      setDescription(data.prefill.description)
+      setPoints(data.prefill.points)
+      setTimeOfDay(data.prefill.time_of_day)
+      setRecurring(data.prefill.recurring)
+      setAssignedTo(data.prefill.assigned_to)
+      setNlSuccess(true)
+    } catch {
+      setNlError('Could not parse quest. Please fill the form manually.')
+    } finally {
+      setNlLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -103,6 +153,46 @@ export function TaskForm({ isOpen, onClose, onSubmit, familyMembers, selectedDat
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
             {error}
+          </div>
+        )}
+
+        {!isEditMode && (
+          <div data-testid="nl-input-section">
+            <label htmlFor="nl-quest-input" className="block text-sm font-medium text-gray-700 mb-1">
+              Describe the quest
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="nl-quest-input"
+                type="text"
+                value={nlInput}
+                onChange={(e) => setNlInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleNlParse()
+                  }
+                }}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
+                placeholder='e.g., "Daily quest for Sarah to make her bed, 5 points"'
+                disabled={nlLoading}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleNlParse}
+                disabled={!nlInput.trim() || nlLoading}
+              >
+                {nlLoading ? 'Parsing...' : 'Fill'}
+              </Button>
+            </div>
+            {nlError && (
+              <p className="mt-1 text-sm text-red-600">{nlError}</p>
+            )}
+            {nlSuccess && (
+              <p className="mt-1 text-sm text-green-600">Form pre-filled! Review and submit below.</p>
+            )}
           </div>
         )}
 
