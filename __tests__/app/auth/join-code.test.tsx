@@ -87,7 +87,7 @@ describe('Join Family Page (with code)', () => {
 
     await waitFor(() => {
       expect(mockSignUp).toHaveBeenCalled()
-      expect(mockPush).toHaveBeenCalledWith('/quests')
+      expect(mockPush).toHaveBeenCalledWith('/onboarding')
     })
   })
 
@@ -157,20 +157,21 @@ describe('Join Family Page (with code)', () => {
     await userEvent.click(screen.getByRole('button', { name: /join the smiths/i }))
 
     await waitFor(() => {
-      // Should navigate to quests even when user is null (skips profile update)
-      expect(mockPush).toHaveBeenCalledWith('/quests')
+      // Should navigate to onboarding even when user is null (skips profile update)
+      expect(mockPush).toHaveBeenCalledWith('/onboarding')
     })
   })
 
-  it('shows role selector with Parent and Kid options', async () => {
+  it('does not show role selector (role moved to onboarding)', async () => {
     render(<JoinFamilyPage />)
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Join Family' })).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: 'Parent' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Kid' })).toBeInTheDocument()
+    expect(screen.queryByText('I am a...')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Parent' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Kid' })).not.toBeInTheDocument()
   })
 
   it('shows Joining... while loading', async () => {
