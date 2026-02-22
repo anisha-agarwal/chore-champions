@@ -4,14 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { RoleSelector, type Role } from '@/components/ui/role-selector'
 import { InAppBrowserBanner } from '@/components/ui/in-app-browser-banner'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [role, setRole] = useState<Role>('child')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState(false)
@@ -63,7 +61,6 @@ export default function SignupPage() {
       options: {
         data: {
           display_name: displayName,
-          role,
         },
       },
     })
@@ -74,7 +71,7 @@ export default function SignupPage() {
       return
     }
 
-    router.push('/quests')
+    router.push('/onboarding')
     router.refresh()
   }
 
@@ -108,13 +105,6 @@ export default function SignupPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-gray-900"
               placeholder="Your name"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              I am a...
-            </label>
-            <RoleSelector selected={role} onChange={setRole} />
           </div>
 
           <div>

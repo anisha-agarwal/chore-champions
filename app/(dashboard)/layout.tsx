@@ -16,6 +16,17 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Ensure user has completed onboarding (has a family)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('family_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.family_id) {
+    redirect('/onboarding')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {children}
