@@ -18,7 +18,7 @@ describe('Auth Callback Route', () => {
     jest.clearAllMocks()
   })
 
-  it('exchanges code for session and redirects to /quests by default', async () => {
+  it('exchanges code for session and redirects to /onboarding by default', async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null })
 
     const request = new Request('http://localhost:3000/auth/callback?code=test-code')
@@ -26,7 +26,7 @@ describe('Auth Callback Route', () => {
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith('test-code')
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('http://localhost:3000/quests')
+    expect(response.headers.get('location')).toBe('http://localhost:3000/onboarding')
   })
 
   it('redirects to specified next URL on success', async () => {

@@ -44,7 +44,7 @@ describe('Join Family Page', () => {
     })
   })
 
-  it('renders join form with role selector after loading', async () => {
+  it('renders join form without role selector after loading', async () => {
     render(<JoinFamilyPage />)
 
     await waitFor(() => {
@@ -52,9 +52,9 @@ describe('Join Family Page', () => {
     })
 
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument()
-    expect(screen.getByText('I am a...')).toBeInTheDocument()
-    expect(screen.getByText('Parent')).toBeInTheDocument()
-    expect(screen.getByText('Kid')).toBeInTheDocument()
+    expect(screen.queryByText('I am a...')).not.toBeInTheDocument()
+    expect(screen.queryByText('Parent')).not.toBeInTheDocument()
+    expect(screen.queryByText('Kid')).not.toBeInTheDocument()
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
   })
@@ -80,7 +80,7 @@ describe('Join Family Page', () => {
     })
   })
 
-  it('calls signUp with child role by default', async () => {
+  it('calls signUp with display_name only (no role)', async () => {
     mockSignUp.mockResolvedValue({
       data: { user: { id: 'user-123' } },
       error: null,
@@ -107,42 +107,6 @@ describe('Join Family Page', () => {
         options: {
           data: {
             display_name: 'Test Kid',
-            role: 'child',
-          },
-        },
-      })
-    })
-  })
-
-  it('calls signUp with parent role when selected', async () => {
-    mockSignUp.mockResolvedValue({
-      data: { user: { id: 'user-123' } },
-      error: null,
-    })
-    mockUpdate.mockReturnValue({
-      eq: jest.fn().mockResolvedValue({ error: null }),
-    })
-
-    render(<JoinFamilyPage />)
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /join family/i })).toBeInTheDocument()
-    })
-
-    await userEvent.type(screen.getByLabelText(/display name/i), 'Test Parent')
-    await userEvent.click(screen.getByText('Parent'))
-    await userEvent.type(screen.getByLabelText(/email/i), 'parent@example.com')
-    await userEvent.type(screen.getByLabelText(/password/i), 'password123')
-    await userEvent.click(screen.getByRole('button', { name: /join test family/i }))
-
-    await waitFor(() => {
-      expect(mockSignUp).toHaveBeenCalledWith({
-        email: 'parent@example.com',
-        password: 'password123',
-        options: {
-          data: {
-            display_name: 'Test Parent',
-            role: 'parent',
           },
         },
       })

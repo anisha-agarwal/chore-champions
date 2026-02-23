@@ -38,7 +38,8 @@ export async function updateSession(request: NextRequest) {
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/quests') ||
     request.nextUrl.pathname.startsWith('/family') ||
     request.nextUrl.pathname.startsWith('/rewards') ||
-    request.nextUrl.pathname.startsWith('/me')
+    request.nextUrl.pathname.startsWith('/me') ||
+    request.nextUrl.pathname.startsWith('/onboarding')
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone()
@@ -52,7 +53,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/quests'
+    url.pathname = '/onboarding'
     return NextResponse.redirect(url)
   }
 
