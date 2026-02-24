@@ -17,6 +17,13 @@ jest.mock('next/image', () => ({
   default: (props: { alt: string }) => <img alt={props.alt} />,
 }))
 
+// Mock StreakTab
+jest.mock('@/components/streaks/streak-tab', () => ({
+  StreakTab: ({ userId, userPoints }: { userId: string; userPoints: number }) => (
+    <div data-testid="streak-tab">Streak Tab for {userId} with {userPoints} points</div>
+  ),
+}))
+
 // Mock Supabase client
 const mockGetUser = jest.fn()
 const mockSignOut = jest.fn()
@@ -743,6 +750,73 @@ describe('Me Page', () => {
       await waitFor(() => {
         expect(screen.queryByText('Choose Avatar')).not.toBeInTheDocument()
       })
+    })
+  })
+
+  describe('tab switching', () => {
+    it('renders Profile and Streaks tab buttons', async () => {
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Streaks' })).toBeInTheDocument()
+    })
+
+    it('shows profile content by default', async () => {
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText('Personal Info')).toBeInTheDocument()
+      expect(screen.queryByTestId('streak-tab')).not.toBeInTheDocument()
+    })
+
+    it('switches to streaks tab when Streaks button clicked', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Streaks' }))
+
+      expect(screen.getByTestId('streak-tab')).toBeInTheDocument()
+      expect(screen.queryByText('Personal Info')).not.toBeInTheDocument()
+    })
+
+    it('switches back to profile tab', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Streaks' }))
+      expect(screen.getByTestId('streak-tab')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Profile' }))
+      expect(screen.getByText('Personal Info')).toBeInTheDocument()
+      expect(screen.queryByTestId('streak-tab')).not.toBeInTheDocument()
+    })
+
+    it('passes correct props to StreakTab', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Streaks' }))
+
+      expect(screen.getByText('Streak Tab for user-123 with 100 points')).toBeInTheDocument()
     })
   })
 
