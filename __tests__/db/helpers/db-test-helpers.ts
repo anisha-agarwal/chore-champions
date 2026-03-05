@@ -241,6 +241,12 @@ export async function cleanupStreakData(userId: string): Promise<void> {
   `)
 }
 
+/** Deletes only streak milestones for a user. */
+export async function cleanupMilestones(userId: string): Promise<void> {
+  assertUuid(userId, 'cleanupMilestones userId')
+  await runSQL(`DELETE FROM streak_milestones WHERE user_id = '${userId}'`)
+}
+
 /**
  * Resets the user's points to a specific value. Useful for testing
  * RPCs that deduct or award points.

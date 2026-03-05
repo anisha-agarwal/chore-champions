@@ -2,11 +2,11 @@ import {
   callRpcAsUser,
   ensureDbTestUser,
   cleanupStreakData,
+  cleanupMilestones,
   setUserPoints,
   getUserPoints,
   getFreezeCount,
 } from '../helpers/db-test-helpers'
-import { runSQL } from '../../../e2e/supabase-admin'
 
 const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 
@@ -59,7 +59,7 @@ describe('claim_streak_milestone', () => {
 
     for (const tier of tiers) {
       // Clean up milestones between each tier test
-      await runSQL(`DELETE FROM streak_milestones WHERE user_id = '${userId}'`)
+      await cleanupMilestones(userId)
       await setUserPoints(userId, 0)
 
       const result = await callRpcAsUser(
