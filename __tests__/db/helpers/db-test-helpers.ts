@@ -1,7 +1,10 @@
+import * as fs from 'fs'
+import * as path from 'path'
 import { runSQL as runSQLRaw } from '../../../e2e/supabase-admin'
 
 const MAX_RETRIES = 5
 const BASE_DELAY_MS = 3000
+const MIN_CALL_INTERVAL_MS = 300
 
 function isRateLimited(error: unknown): boolean {
   return error instanceof Error && (error.message.includes('429') || error.message.includes('Too Many Requests'))
@@ -12,8 +15,24 @@ async function retryDelay(attempt: number): Promise<void> {
   await new Promise((r) => setTimeout(r, delay))
 }
 
-/** Wraps runSQL with retry logic for 429 rate limit errors. */
+/** Throttle file shared across Jest module resets to prevent API bursts. */
+const THROTTLE_FILE = path.join(__dirname, '..', '.db-last-call-ts')
+
+function throttle(): Promise<void> {
+  let lastCall = 0
+  try {
+    lastCall = parseInt(fs.readFileSync(THROTTLE_FILE, 'utf-8'), 10) || 0
+  } catch { /* first call */ }
+  const now = Date.now()
+  const wait = Math.max(0, MIN_CALL_INTERVAL_MS - (now - lastCall))
+  fs.writeFileSync(THROTTLE_FILE, String(now + wait))
+  if (wait > 0) return new Promise((r) => setTimeout(r, wait))
+  return Promise.resolve()
+}
+
+/** Wraps runSQL with throttling and retry logic for 429 rate limit errors. */
 async function runSQL(query: string): Promise<unknown[]> {
+  await throttle()
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await runSQLRaw(query)
@@ -27,6 +46,7 @@ async function runSQL(query: string): Promise<unknown[]> {
 
 /** Wraps fetch with retry logic for 429 rate limit errors. */
 async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+  await throttle()
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const res = await fetch(url, init)
     if (res.status !== 429 || attempt === MAX_RETRIES) return res
@@ -154,12 +174,23 @@ async function ensureAuthUserRobust(
   throw new Error(`Failed to create or find user ${email}: ${errText}`)
 }
 
+const USER_CACHE_FILE = path.join(__dirname, '..', '.db-test-user-cache.json')
+
 /**
  * Creates or retrieves the dedicated DB test user with a family and profile.
- * Caches the result within the current Jest worker process.
+ * Uses file-based cache to survive Jest module isolation between test files.
  */
 export async function ensureDbTestUser(): Promise<DbTestUser> {
   if (cachedUser) return cachedUser
+
+  // Check file cache (persists across Jest module resets with maxWorkers: 1)
+  try {
+    const data = JSON.parse(fs.readFileSync(USER_CACHE_FILE, 'utf-8')) as DbTestUser
+    if (UUID_REGEX.test(data.userId) && UUID_REGEX.test(data.familyId)) {
+      cachedUser = data
+      return cachedUser
+    }
+  } catch { /* no cache, proceed with DB lookup */ }
 
   const userId = await ensureAuthUserRobust(DB_TEST_EMAIL, DB_TEST_PASSWORD, DB_TEST_DISPLAY_NAME)
 
@@ -190,6 +221,8 @@ export async function ensureDbTestUser(): Promise<DbTestUser> {
   }
 
   cachedUser = { userId, familyId }
+  // Write to file so subsequent test files skip DB lookup
+  try { fs.writeFileSync(USER_CACHE_FILE, JSON.stringify(cachedUser)) } catch { /* best effort */ }
   return cachedUser
 }
 
