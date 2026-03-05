@@ -1,7 +1,16 @@
 import { runSQL as runSQLRaw } from '../../../e2e/supabase-admin'
 
-const MAX_RETRIES = 3
-const BASE_DELAY_MS = 2000
+const MAX_RETRIES = 5
+const BASE_DELAY_MS = 3000
+
+function isRateLimited(error: unknown): boolean {
+  return error instanceof Error && (error.message.includes('429') || error.message.includes('Too Many Requests'))
+}
+
+async function retryDelay(attempt: number): Promise<void> {
+  const delay = BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 1000
+  await new Promise((r) => setTimeout(r, delay))
+}
 
 /** Wraps runSQL with retry logic for 429 rate limit errors. */
 async function runSQL(query: string): Promise<unknown[]> {
@@ -9,11 +18,19 @@ async function runSQL(query: string): Promise<unknown[]> {
     try {
       return await runSQLRaw(query)
     } catch (error) {
-      const is429 = error instanceof Error && error.message.includes('429')
-      if (!is429 || attempt === MAX_RETRIES) throw error
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt)
-      await new Promise((r) => setTimeout(r, delay))
+      if (!isRateLimited(error) || attempt === MAX_RETRIES) throw error
+      await retryDelay(attempt)
     }
+  }
+  throw new Error('Unreachable')
+}
+
+/** Wraps fetch with retry logic for 429 rate limit errors. */
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, init)
+    if (res.status !== 429 || attempt === MAX_RETRIES) return res
+    await retryDelay(attempt)
   }
   throw new Error('Unreachable')
 }
@@ -88,7 +105,7 @@ async function ensureAuthUserRobust(
   if (existing.length > 0) return existing[0].id
 
   // Try to create via GoTrue Admin API
-  const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+  const res = await fetchWithRetry(`${supabaseUrl}/auth/v1/admin/users`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${serviceRoleKey}`,
@@ -109,7 +126,7 @@ async function ensureAuthUserRobust(
   }
 
   // If creation failed due to duplicate, search by email via the admin API
-  const searchRes = await fetch(
+  const searchRes = await fetchWithRetry(
     `${supabaseUrl}/auth/v1/admin/users`,
     {
       method: 'GET',
