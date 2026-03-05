@@ -146,7 +146,7 @@ BEGIN
         FROM task_completions tc
         JOIN tasks t ON tc.task_id = t.id
         WHERE tc.completed_by = p_user_id
-          AND tc.completion_date = v_check_date::text
+          AND tc.completion_date = v_check_date
           AND t.recurring = 'daily'
           AND t.assigned_to = p_user_id;
 

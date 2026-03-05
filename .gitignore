@@ -16,6 +16,7 @@
 /test-results/
 /.auth/
 /videos/
+__tests__/db/.db-test-user-cache.json
 
 # next.js
 /.next/

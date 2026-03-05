@@ -10,6 +10,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage --coverageReporters=json-summary --coverageReporters=text",
     "test:watch": "jest --watch",
+    "test:db": "jest --config jest.db.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "pw:demo": "tsx scripts/playwright-demo.ts",
@@ -46,6 +47,7 @@
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.0",
     "typescript": "^5"
