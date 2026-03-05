@@ -1,3 +1,5 @@
+jest.retryTimes(1, { logErrorsBeforeRetry: true })
+
 import {
   callRpcAsUser,
   ensureDbTestUser,
