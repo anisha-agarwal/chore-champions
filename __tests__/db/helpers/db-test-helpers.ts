@@ -2,8 +2,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { runSQL as runSQLRaw } from '../../../e2e/supabase-admin'
 
-const MAX_RETRIES = 5
-const BASE_DELAY_MS = 3000
+const MAX_RETRIES = 3
+const BASE_DELAY_MS = 1500
 
 function isRateLimited(error: unknown): boolean {
   return error instanceof Error && (error.message.includes('429') || error.message.includes('Too Many Requests'))
