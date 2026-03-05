@@ -1,7 +1,7 @@
 import {
   callRpcAsUser,
   ensureDbTestUser,
-  cleanupStreakData,
+  cleanupAndReset,
   cleanupMilestones,
   setUserPoints,
   getUserPoints,
@@ -15,23 +15,19 @@ let userId: string
 beforeAll(async () => {
   const user = await ensureDbTestUser()
   userId = user.userId
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 afterAll(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 afterEach(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 describe('claim_streak_milestone', () => {
   it('awards 50 points and Week Warrior badge for 7-day milestone', async () => {
-    await setUserPoints(userId, 0)
-
     const result = await callRpcAsUser(
       userId,
       `claim_streak_milestone('${userId}'::uuid, 'active_day'::text, '${NIL_UUID}'::uuid, 7, 7)`
@@ -58,9 +54,8 @@ describe('claim_streak_milestone', () => {
     ]
 
     for (const tier of tiers) {
-      // Clean up milestones between each tier test
+      // cleanupMilestones also resets points in a single API call
       await cleanupMilestones(userId)
-      await setUserPoints(userId, 0)
 
       const result = await callRpcAsUser(
         userId,
@@ -80,8 +75,6 @@ describe('claim_streak_milestone', () => {
   })
 
   it('is idempotent - second claim returns error', async () => {
-    await setUserPoints(userId, 0)
-
     // First claim succeeds
     await callRpcAsUser(
       userId,
@@ -119,8 +112,6 @@ describe('claim_streak_milestone', () => {
   })
 
   it('awards a free freeze at 30-day milestone', async () => {
-    await setUserPoints(userId, 0)
-
     const result = await callRpcAsUser(
       userId,
       `claim_streak_milestone('${userId}'::uuid, 'active_day'::text, '${NIL_UUID}'::uuid, 30, 30)`
@@ -135,8 +126,6 @@ describe('claim_streak_milestone', () => {
   })
 
   it('awards a free freeze at 100-day milestone', async () => {
-    await setUserPoints(userId, 0)
-
     const result = await callRpcAsUser(
       userId,
       `claim_streak_milestone('${userId}'::uuid, 'active_day'::text, '${NIL_UUID}'::uuid, 100, 100)`

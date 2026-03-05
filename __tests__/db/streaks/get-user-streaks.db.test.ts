@@ -1,11 +1,11 @@
 import {
   callRpcAsUser,
   ensureDbTestUser,
-  cleanupStreakData,
+  cleanupAndReset,
   createDailyTask,
   completeTaskOnDate,
+  runSQLWithRetry,
 } from '../helpers/db-test-helpers'
-import { runSQL } from '../../../e2e/supabase-admin'
 
 let userId: string
 let familyId: string
@@ -14,15 +14,15 @@ beforeAll(async () => {
   const user = await ensureDbTestUser()
   userId = user.userId
   familyId = user.familyId
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 afterAll(async () => {
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 afterEach(async () => {
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 describe('get_user_streaks', () => {
@@ -166,7 +166,7 @@ describe('get_user_streaks', () => {
     await completeTaskOnDate(taskId, userId, 'CURRENT_DATE - INTERVAL \'2 days\'')
 
     // Insert a freeze usage for yesterday on the active_day streak
-    await runSQL(`
+    await runSQLWithRetry(`
       INSERT INTO streak_freezes (user_id, available, used)
       VALUES ('${userId}', 1, 1)
       ON CONFLICT (user_id) DO UPDATE SET available = 1, used = 1;
@@ -192,7 +192,7 @@ describe('get_user_streaks', () => {
     await completeTaskOnDate(taskId, userId, 'CURRENT_DATE - INTERVAL \'2 days\'')
 
     // Freeze yesterday for this specific task
-    await runSQL(`
+    await runSQLWithRetry(`
       INSERT INTO streak_freezes (user_id, available, used)
       VALUES ('${userId}', 1, 1)
       ON CONFLICT (user_id) DO UPDATE SET available = 1, used = 1;
@@ -223,7 +223,7 @@ describe('get_user_streaks', () => {
     await completeTaskOnDate(task2Id, userId, 'CURRENT_DATE - INTERVAL \'2 days\'')
 
     // Freeze yesterday for perfect_day
-    await runSQL(`
+    await runSQLWithRetry(`
       INSERT INTO streak_freezes (user_id, available, used)
       VALUES ('${userId}', 1, 1)
       ON CONFLICT (user_id) DO UPDATE SET available = 1, used = 1;

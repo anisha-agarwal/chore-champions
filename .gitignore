@@ -17,7 +17,6 @@
 /.auth/
 /videos/
 __tests__/db/.db-test-user-cache.json
-__tests__/db/.db-last-call-ts
 
 # next.js
 /.next/

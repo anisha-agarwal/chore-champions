@@ -1,34 +1,31 @@
 import {
   callRpcAsUser,
   ensureDbTestUser,
-  cleanupStreakData,
-  setUserPoints,
+  cleanupAndReset,
+  runSQLWithRetry,
 } from '../helpers/db-test-helpers'
-import { runSQL } from '../../../e2e/supabase-admin'
 
 let userId: string
 
 beforeAll(async () => {
   const user = await ensureDbTestUser()
   userId = user.userId
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 afterAll(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 afterEach(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 /**
  * Gives the user a freeze by directly inserting into streak_freezes.
  */
 async function giveFreeze(available: number, used: number = 0): Promise<void> {
-  await runSQL(`
+  await runSQLWithRetry(`
     INSERT INTO streak_freezes (user_id, available, used)
     VALUES ('${userId}', ${available}, ${used})
     ON CONFLICT (user_id) DO UPDATE SET available = ${available}, used = ${used}, updated_at = now();
@@ -48,14 +45,14 @@ describe('use_streak_freeze', () => {
     expect(rows[0].use_streak_freeze).toMatchObject({ success: true })
 
     // Check that used count incremented
-    const freezeResult = await runSQL(
+    const freezeResult = await runSQLWithRetry(
       `SELECT available, used FROM streak_freezes WHERE user_id = '${userId}'`
     ) as Array<{ available: number; used: number }>
     expect(freezeResult[0].available).toBe(2)
     expect(freezeResult[0].used).toBe(1)
 
     // Check that freeze usage record was created
-    const usageResult = await runSQL(
+    const usageResult = await runSQLWithRetry(
       `SELECT streak_type, freeze_date FROM streak_freeze_usage WHERE user_id = '${userId}'`
     ) as Array<{ streak_type: string; freeze_date: string }>
     expect(usageResult).toHaveLength(1)
@@ -63,7 +60,6 @@ describe('use_streak_freeze', () => {
   })
 
   it('fails when no freezes are available', async () => {
-    // No freezes at all
     const result = await callRpcAsUser(
       userId,
       `use_streak_freeze('${userId}'::uuid, CURRENT_DATE, 'active_day'::text, NULL::uuid)`

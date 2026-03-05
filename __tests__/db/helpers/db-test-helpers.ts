@@ -4,7 +4,6 @@ import { runSQL as runSQLRaw } from '../../../e2e/supabase-admin'
 
 const MAX_RETRIES = 5
 const BASE_DELAY_MS = 3000
-const MIN_CALL_INTERVAL_MS = 300
 
 function isRateLimited(error: unknown): boolean {
   return error instanceof Error && (error.message.includes('429') || error.message.includes('Too Many Requests'))
@@ -15,24 +14,8 @@ async function retryDelay(attempt: number): Promise<void> {
   await new Promise((r) => setTimeout(r, delay))
 }
 
-/** Throttle file shared across Jest module resets to prevent API bursts. */
-const THROTTLE_FILE = path.join(__dirname, '..', '.db-last-call-ts')
-
-function throttle(): Promise<void> {
-  let lastCall = 0
-  try {
-    lastCall = parseInt(fs.readFileSync(THROTTLE_FILE, 'utf-8'), 10) || 0
-  } catch { /* first call */ }
-  const now = Date.now()
-  const wait = Math.max(0, MIN_CALL_INTERVAL_MS - (now - lastCall))
-  fs.writeFileSync(THROTTLE_FILE, String(now + wait))
-  if (wait > 0) return new Promise((r) => setTimeout(r, wait))
-  return Promise.resolve()
-}
-
-/** Wraps runSQL with throttling and retry logic for 429 rate limit errors. */
+/** Wraps runSQL with retry logic for 429 rate limit errors. */
 async function runSQL(query: string): Promise<unknown[]> {
-  await throttle()
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await runSQLRaw(query)
@@ -46,7 +29,6 @@ async function runSQL(query: string): Promise<unknown[]> {
 
 /** Wraps fetch with retry logic for 429 rate limit errors. */
 async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
-  await throttle()
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const res = await fetch(url, init)
     if (res.status !== 429 || attempt === MAX_RETRIES) return res
@@ -241,10 +223,29 @@ export async function cleanupStreakData(userId: string): Promise<void> {
   `)
 }
 
-/** Deletes only streak milestones for a user. */
+/** Deletes milestones and resets points in a single API call. */
 export async function cleanupMilestones(userId: string): Promise<void> {
   assertUuid(userId, 'cleanupMilestones userId')
-  await runSQL(`DELETE FROM streak_milestones WHERE user_id = '${userId}'`)
+  await runSQL(`
+    DELETE FROM streak_milestones WHERE user_id = '${userId}';
+    UPDATE profiles SET points = 0 WHERE id = '${userId}';
+  `)
+}
+
+/**
+ * Cleans up all streak data AND resets points in a single API call.
+ * Use in afterEach to minimize API calls.
+ */
+export async function cleanupAndReset(userId: string): Promise<void> {
+  assertUuid(userId, 'cleanupAndReset userId')
+  await runSQL(`
+    DELETE FROM streak_freeze_usage WHERE user_id = '${userId}';
+    DELETE FROM streak_milestones WHERE user_id = '${userId}';
+    DELETE FROM streak_freezes WHERE user_id = '${userId}';
+    DELETE FROM task_completions WHERE completed_by = '${userId}';
+    DELETE FROM tasks WHERE assigned_to = '${userId}';
+    UPDATE profiles SET points = 0 WHERE id = '${userId}';
+  `)
 }
 
 /**
@@ -298,6 +299,9 @@ export async function completeTaskOnDate(
     ON CONFLICT (task_id, completion_date) WHERE completion_date IS NOT NULL DO NOTHING;
   `)
 }
+
+/** Exposes the retry-wrapped runSQL for test files that need custom queries. */
+export { runSQL as runSQLWithRetry }
 
 /** Verifies freeze inventory after RPCs that buy or consume freezes. */
 export async function getFreezeCount(userId: string): Promise<{ available: number; used: number } | null> {

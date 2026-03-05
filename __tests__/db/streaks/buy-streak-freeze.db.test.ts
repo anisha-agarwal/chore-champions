@@ -1,7 +1,7 @@
 import {
   callRpcAsUser,
   ensureDbTestUser,
-  cleanupStreakData,
+  cleanupAndReset,
   setUserPoints,
   getUserPoints,
   getFreezeCount,
@@ -12,17 +12,15 @@ let userId: string
 beforeAll(async () => {
   const user = await ensureDbTestUser()
   userId = user.userId
-  await cleanupStreakData(userId)
+  await cleanupAndReset(userId)
 })
 
 afterAll(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 afterEach(async () => {
-  await cleanupStreakData(userId)
-  await setUserPoints(userId, 0)
+  await cleanupAndReset(userId)
 })
 
 describe('buy_streak_freeze', () => {
