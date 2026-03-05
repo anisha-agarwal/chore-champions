@@ -1,4 +1,22 @@
-import { runSQL } from '../../../e2e/supabase-admin'
+import { runSQL as runSQLRaw } from '../../../e2e/supabase-admin'
+
+const MAX_RETRIES = 3
+const BASE_DELAY_MS = 2000
+
+/** Wraps runSQL with retry logic for 429 rate limit errors. */
+async function runSQL(query: string): Promise<unknown[]> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await runSQLRaw(query)
+    } catch (error) {
+      const is429 = error instanceof Error && error.message.includes('429')
+      if (!is429 || attempt === MAX_RETRIES) throw error
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt)
+      await new Promise((r) => setTimeout(r, delay))
+    }
+  }
+  throw new Error('Unreachable')
+}
 
 const DB_TEST_EMAIL = 'db-test@chore-champions-test.local'
 const DB_TEST_PASSWORD = 'TestPassword123!'
