@@ -9,7 +9,10 @@ import { Modal } from '@/components/ui/modal'
 import { RoleSelector, type Role } from '@/components/ui/role-selector'
 import { UnderlineInput } from '@/components/ui/underline-input'
 import { Button } from '@/components/ui/button'
+import { StreakTab } from '@/components/streaks/streak-tab'
 import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
+
+type MeTab = 'profile' | 'streaks'
 
 export default function MePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -22,6 +25,7 @@ export default function MePage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<MeTab>('profile')
   const [isPasswordOpen, setIsPasswordOpen] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -182,8 +186,31 @@ export default function MePage() {
         </button>
       </header>
 
+      {/* Tab Switcher */}
+      <div className="px-6 pb-2">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 max-w-md mx-auto">
+          {(['profile', 'streaks'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
+                activeTab === tab
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab === 'profile' ? 'Profile' : 'Streaks'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <main className="flex-1 px-6 pt-4 pb-24">
         <div className="max-w-md mx-auto">
+          {activeTab === 'streaks' ? (
+            <StreakTab userId={profile.id} userPoints={profile.points} />
+          ) : (
+          <>
           {/* Avatar Section */}
           <section className="flex flex-col items-center mb-10">
             <button
@@ -281,6 +308,8 @@ export default function MePage() {
               Save Changes
             </Button>
           </form>
+          </>
+          )}
         </div>
       </main>
 

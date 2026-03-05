@@ -171,6 +171,22 @@ export type Database = {
         Args: { invite_id: string }
         Returns: undefined
       }
+      get_user_streaks: {
+        Args: { p_user_id: string }
+        Returns: UserStreaks
+      }
+      buy_streak_freeze: {
+        Args: { p_user_id: string }
+        Returns: { success: boolean; error?: string }
+      }
+      use_streak_freeze: {
+        Args: { p_user_id: string; p_freeze_date: string; p_streak_type: string; p_task_id?: string }
+        Returns: { success: boolean; error?: string }
+      }
+      claim_streak_milestone: {
+        Args: { p_user_id: string; p_streak_type: string; p_task_id: string; p_milestone_days: number; p_current_streak: number }
+        Returns: { success: boolean; error?: string; bonus?: number; badge?: string }
+      }
     }
   }
 }
@@ -205,6 +221,38 @@ export const TIME_OF_DAY_OPTIONS = [
   { value: 'afternoon', label: 'Afternoon' },
   { value: 'night', label: 'Night' },
 ] as const
+
+// Streak types
+export type StreakMilestone = {
+  days: number
+  bonus: number
+  badge: string
+}
+
+export type TaskStreak = {
+  task_id: string
+  title: string
+  current_streak: number
+}
+
+export type UserStreaks = {
+  active_day_streak: number
+  perfect_day_streak: number
+  task_streaks: TaskStreak[]
+}
+
+export type StreakFreezes = {
+  available: number
+  used: number
+}
+
+export type ClaimedMilestone = {
+  streak_type: string
+  task_id: string | null
+  milestone_days: number
+  points_awarded: number
+  badge_name: string
+}
 
 // Avatar options
 export const AVATAR_OPTIONS = [
