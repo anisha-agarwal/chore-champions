@@ -271,6 +271,31 @@ export default function FamilyPage() {
         </section>
       )}
 
+      {/* Family Analytics link for parents */}
+      {currentUser?.role === 'parent' && (
+        <section>
+          <Link
+            href="/analytics"
+            className="flex items-center justify-between p-4 rounded-xl border border-purple-100 bg-purple-50 hover:bg-purple-100 transition"
+          >
+            <div>
+              <p className="font-semibold text-purple-800">Family Analytics</p>
+              <p className="text-xs text-purple-600 mt-0.5">
+                View completion rates, trends, and insights
+              </p>
+            </div>
+            <svg
+              className="w-5 h-5 text-purple-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </section>
+      )}
+
       {family.invite_code && currentUser && (
         <InviteModal
           isOpen={isInviteOpen}

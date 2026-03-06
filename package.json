@@ -18,7 +18,8 @@
     "pw:seed": "tsx scripts/playwright-seed.ts",
     "pw:seed:cleanup": "tsx scripts/playwright-seed.ts --cleanup",
     "pw:record": "tsx scripts/playwright-record.ts",
-    "pw:record:narrated": "tsx scripts/playwright-record-narrated.ts"
+    "pw:record:narrated": "tsx scripts/playwright-record-narrated.ts",
+    "pw:visual": "playwright test --project=visual-public --project=visual-auth"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -28,6 +29,7 @@
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },

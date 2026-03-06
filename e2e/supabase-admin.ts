@@ -8,24 +8,37 @@ export async function runSQL(query: string): Promise<unknown[]> {
   const token = process.env.SUPABASE_ACCESS_TOKEN
   if (!token) throw new Error('SUPABASE_ACCESS_TOKEN not set in .env.local')
 
-  const res = await fetch(
-    `https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
-    }
-  )
+  const maxRetries = 5
+  const baseDelay = 3000
 
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(
+      `https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      }
+    )
+
+    if (res.ok) {
+      return (await res.json()) as unknown[]
+    }
+
+    if (res.status === 429 && attempt < maxRetries) {
+      const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000
+      await new Promise((r) => setTimeout(r, delay))
+      continue
+    }
+
     const text = await res.text()
     throw new Error(`SQL query failed (${res.status}): ${text}`)
   }
 
-  return (await res.json()) as unknown[]
+  throw new Error('runSQL: exhausted retries')
 }
 
 /**

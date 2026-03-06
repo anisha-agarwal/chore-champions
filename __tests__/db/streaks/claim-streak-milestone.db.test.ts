@@ -5,7 +5,6 @@ import {
   ensureDbTestUser,
   cleanupAndReset,
   cleanupMilestones,
-  setUserPoints,
   getUserPoints,
   getFreezeCount,
 } from '../helpers/db-test-helpers'

@@ -127,6 +127,33 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
+      - name: Generate missing visual snapshots
+        run: |
+          if ! ls e2e/visual.spec.ts-snapshots/*-linux.png 1>/dev/null 2>&1; then
+            npx playwright test e2e/visual.spec.ts --update-snapshots --reporter=line || true
+          fi
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_PARENT_EMAIL: ${{ secrets.TEST_PARENT_EMAIL }}
+          TEST_PARENT_PASSWORD: ${{ secrets.TEST_PARENT_PASSWORD }}
+          TEST_CHILD_EMAIL: ${{ secrets.TEST_CHILD_EMAIL }}
+          TEST_CHILD_PASSWORD: ${{ secrets.TEST_CHILD_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Commit Linux snapshots if generated
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only | grep -q "linux.png"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add e2e/visual.spec.ts-snapshots/*-linux.png
+            git commit -m "chore: add Linux visual snapshots [skip ci]"
+            git push
+            sleep 10
+          fi
+
       - name: Run E2E tests
         run: npm run test:e2e
         env:

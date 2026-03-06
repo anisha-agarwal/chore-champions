@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Avatar } from '@/components/ui/avatar'
@@ -10,9 +11,15 @@ import { RoleSelector, type Role } from '@/components/ui/role-selector'
 import { UnderlineInput } from '@/components/ui/underline-input'
 import { Button } from '@/components/ui/button'
 import { StreakTab } from '@/components/streaks/streak-tab'
+import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton'
 import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
 
-type MeTab = 'profile' | 'streaks'
+const KidStatsTab = dynamic(
+  () => import('@/components/analytics/kid-stats-tab').then((m) => ({ default: m.KidStatsTab })),
+  { loading: () => <AnalyticsSkeleton />, ssr: false }
+)
+
+type MeTab = 'profile' | 'streaks' | 'stats'
 
 export default function MePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -189,7 +196,7 @@ export default function MePage() {
       {/* Tab Switcher */}
       <div className="px-6 pb-2">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 max-w-md mx-auto">
-          {(['profile', 'streaks'] as const).map((tab) => (
+          {(['profile', 'streaks', 'stats'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -199,7 +206,7 @@ export default function MePage() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'profile' ? 'Profile' : 'Streaks'}
+              {tab === 'profile' ? 'Profile' : tab === 'streaks' ? 'Streaks' : 'Stats'}
             </button>
           ))}
         </div>
@@ -209,6 +216,8 @@ export default function MePage() {
         <div className="max-w-md mx-auto">
           {activeTab === 'streaks' ? (
             <StreakTab userId={profile.id} userPoints={profile.points} />
+          ) : activeTab === 'stats' ? (
+            <KidStatsTab userId={profile.id} />
           ) : (
           <>
           {/* Avatar Section */}

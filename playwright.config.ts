@@ -38,7 +38,7 @@ export default defineConfig({
         storageState: '.auth/parent.json',
       },
       dependencies: ['setup'],
-      testMatch: /quests\.spec\.ts|me\.spec\.ts|family\.spec\.ts|family-invite\.spec\.ts|rewards\.spec\.ts|dashboard-nav\.spec\.ts|profile-actions\.spec\.ts|encouragement\.spec\.ts|nl-quest-creation\.spec\.ts|onboarding\.spec\.ts|streaks\.spec\.ts/,
+      testMatch: /quests\.spec\.ts|me\.spec\.ts|family\.spec\.ts|family-invite\.spec\.ts|rewards\.spec\.ts|dashboard-nav\.spec\.ts|profile-actions\.spec\.ts|encouragement\.spec\.ts|nl-quest-creation\.spec\.ts|onboarding\.spec\.ts|streaks\.spec\.ts|analytics\.spec\.ts/,
     },
     // Destructive parent tests (sign-out) that invalidate the session - run last
     {
@@ -65,6 +65,24 @@ export default defineConfig({
       name: 'auth-pages',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /auth\.spec\.ts/,
+    },
+    // Visual regression tests - public pages (no auth)
+    {
+      name: 'visual-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /visual\.spec\.ts/,
+      grep: /Visual regression - public pages/,
+    },
+    // Visual regression tests - authenticated pages (parent auth)
+    {
+      name: 'visual-auth',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/parent.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /visual\.spec\.ts/,
+      grep: /Visual regression - authenticated pages/,
     },
   ],
   webServer: {
