@@ -283,6 +283,65 @@ describe('generateStaticSummary', () => {
     expect(summary).toContain('Alice')
   })
 
+  it('generates declining message for child when delta < 0', () => {
+    const stats = { ...baseKidStats, completions_this_week: 2, completions_last_week: 5 }
+    const summary = generateStaticSummary(stats, 'child')
+    expect(summary).toContain('You can do even better next week!')
+  })
+
+  it('generates steady message for child when delta === 0', () => {
+    const stats = { ...baseKidStats, completions_this_week: 3, completions_last_week: 3 }
+    const summary = generateStaticSummary(stats, 'child')
+    expect(summary).toContain('Same as last week')
+    expect(summary).toContain('keep it up')
+  })
+
+  it('uses singular "quest" for 1 completion', () => {
+    const stats = { ...baseKidStats, completions_this_week: 1, completions_last_week: 0 }
+    const summary = generateStaticSummary(stats, 'child')
+    expect(summary).toContain('1 quest ')
+    expect(summary).not.toContain('1 quests')
+  })
+
+  it('uses nickname when available for top child in parent summary', () => {
+    const familyStats: FamilyAnalytics = {
+      children: [
+        {
+          profile: { id: '1', display_name: 'Alice Lastname', nickname: 'Ali', avatar_url: null, points: 100 },
+          completions_this_week: 8,
+          completions_last_week: 5,
+          completion_rate: 0.8,
+        },
+      ],
+      daily_totals: [],
+      top_tasks: [],
+      bottom_tasks: [],
+      family_completion_rate: 0.75,
+    }
+    const summary = generateStaticSummary(familyStats, 'parent')
+    expect(summary).toContain('Ali')
+    expect(summary).not.toContain('Alice Lastname')
+  })
+
+  it('falls back to "A child" when top child has no nickname or display_name', () => {
+    const familyStats: FamilyAnalytics = {
+      children: [
+        {
+          profile: { id: '1', display_name: null as unknown as string, nickname: null, avatar_url: null, points: 50 },
+          completions_this_week: 3,
+          completions_last_week: 2,
+          completion_rate: 0.6,
+        },
+      ],
+      daily_totals: [],
+      top_tasks: [],
+      bottom_tasks: [],
+      family_completion_rate: 0.5,
+    }
+    const summary = generateStaticSummary(familyStats, 'parent')
+    expect(summary).toContain('A child')
+  })
+
   it('handles empty family gracefully', () => {
     const familyStats: FamilyAnalytics = {
       children: [],
@@ -356,6 +415,18 @@ describe('getBadgeProgress', () => {
       milestone_days: 7,
       streak_type: 'task',
       task_id: 'unknown-task',
+      claimed_at: null,
+    }
+    expect(getBadgeProgress(badge, streaks)).toBe(0)
+  })
+
+  it('returns 0 for unmatched streak_type', () => {
+    const badge: BadgeInfo = {
+      badge_name: 'Unknown Type',
+      milestone_days: 7,
+      // Force an unmatched streak_type to cover the fallthrough branch
+      streak_type: 'nonexistent' as BadgeInfo['streak_type'],
+      task_id: null,
       claimed_at: null,
     }
     expect(getBadgeProgress(badge, streaks)).toBe(0)

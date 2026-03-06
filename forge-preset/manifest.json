@@ -1,0 +1,155 @@
+{
+  "preset": "chore-champions",
+  "version": 3,
+  "description": "Next.js 16 + Supabase family chore tracking app with Playwright E2E, smoke, and visual tests",
+  "base_ref": "main",
+  "build_command": "npm run build",
+  "eslint_config": "eslint.config.mjs",
+  "dev_server": {
+    "command": "npm run dev -- --port ${PORT}",
+    "health_url": "http://localhost:${PORT}/",
+    "startup_timeout": 60
+  },
+  "models": {
+    "code": "sonnet",
+    "fix": "sonnet",
+    "code_review": "opus",
+    "create_pr": "sonnet",
+    "e2e": "sonnet",
+    "judge": "opus"
+  },
+  "pipelines": {
+    "full": {
+      "steps": ["code", "lint", "test", "db_test", "e2e", "smoke", "visual", "code_review", "report", "create_pr"],
+      "dependencies": {
+        "lint": ["code"],
+        "test": ["code"],
+        "db_test": ["code"],
+        "e2e": ["lint", "test", "db_test"],
+        "smoke": ["e2e"],
+        "visual": ["e2e"],
+        "code_review": ["lint", "test", "db_test"],
+        "report": ["code_review", "smoke", "visual"],
+        "create_pr": ["report"]
+      }
+    },
+    "lightweight": {
+      "steps": ["code", "lint", "test", "db_test", "report"],
+      "dependencies": {
+        "lint": ["code"],
+        "test": ["code"],
+        "db_test": ["code"],
+        "report": ["lint", "test", "db_test"]
+      }
+    },
+    "test-only": {
+      "steps": ["lint", "test", "db_test", "e2e", "smoke", "visual", "report"],
+      "dependencies": {
+        "e2e": ["lint", "test", "db_test"],
+        "smoke": ["e2e"],
+        "visual": ["e2e"],
+        "report": ["smoke", "visual"]
+      }
+    }
+  },
+  "steps": {
+    "code": {
+      "type": "ai",
+      "description": "Implement the planned changes",
+      "skill": "${PRESET_DIR}/skills/code.md",
+      "timeout": 3600,
+      "judge": {
+        "criteria_source": "plan",
+        "max_retries": 2,
+        "model": "opus"
+      }
+    },
+    "lint": {
+      "type": "command",
+      "description": "Run ESLint",
+      "run_command": "npm run lint",
+      "error_file": "lint-errors.txt",
+      "fix_hints": "Fix ESLint errors. Run 'npx eslint --fix .' to auto-fix what you can, then manually fix the rest. Check eslint.config.mjs for project rules.",
+      "timeout": 300,
+      "parallel": true
+    },
+    "test": {
+      "type": "command",
+      "description": "Run Jest unit tests with coverage",
+      "run_command": "npm run test:coverage",
+      "error_file": "test-errors.txt",
+      "fix_hints": "Fix failing unit tests or coverage gaps. These use React Testing Library and Jest. Tests are in __tests__/. Read the test output carefully — fix source code or tests as needed. New files must have 100% coverage. Do NOT modify __tests__/db/ files.",
+      "timeout": 300,
+      "parallel": true
+    },
+    "db_test": {
+      "type": "command",
+      "description": "Run database integration tests against real Supabase",
+      "run_command": "npm run test:db",
+      "error_file": "db-test-errors.txt",
+      "fix_hints": "Fix failing DB integration tests. These test Supabase RPCs against the real database using set_config to simulate auth.uid(). Tests are in __tests__/db/. Check if SQL migrations need updating in supabase/migrations/.",
+      "timeout": 120,
+      "parallel": true
+    },
+    "e2e": {
+      "type": "ai",
+      "description": "Run Playwright E2E tests, fix failures, and run new migrations if needed",
+      "skill": "${PRESET_DIR}/skills/e2e.md",
+      "subagent_type": "general-purpose",
+      "timeout": 1200
+    },
+    "smoke": {
+      "type": "command",
+      "description": "Run Playwright smoke tests",
+      "run_command": "npm run pw:smoke",
+      "error_file": "smoke-errors.txt",
+      "fix_hints": "Fix failing smoke tests. These are quick health checks of all pages using Playwright. The dev server must be running.",
+      "timeout": 300
+    },
+    "visual": {
+      "type": "command",
+      "description": "Run Playwright visual regression tests",
+      "run_command": "npm run pw:visual",
+      "error_file": "visual-errors.txt",
+      "fix_hints": "Fix visual regression failures. Compare screenshots to baselines. Update baselines with --update-snapshots if the UI changes are intentional.",
+      "timeout": 300
+    },
+    "code_review": {
+      "type": "ai",
+      "description": "Review code changes for correctness, security, and style",
+      "skill": "${PRESET_DIR}/skills/code-review.md",
+      "subagent_type": "general-purpose",
+      "two_phase": true,
+      "timeout": 600,
+      "judge": {
+        "criteria_source": "findings",
+        "max_retries": 3,
+        "model": "opus"
+      },
+      "evidence": [
+        {
+          "rule": "file_exists",
+          "file_glob": "code-review-verdict.json",
+          "min_file_size": 10
+        }
+      ]
+    },
+    "report": {
+      "type": "inline",
+      "description": "Generate pipeline report and open dashboard"
+    },
+    "create_pr": {
+      "type": "ai",
+      "description": "Create a GitHub pull request",
+      "skill": "${PRESET_DIR}/skills/create-pr.md",
+      "timeout": 300,
+      "evidence": [
+        {
+          "rule": "file_exists",
+          "file_glob": "pr-url.txt",
+          "min_file_size": 5
+        }
+      ]
+    }
+  }
+}
