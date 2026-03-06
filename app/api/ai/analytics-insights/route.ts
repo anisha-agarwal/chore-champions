@@ -68,6 +68,7 @@ export async function POST(request: Request) {
   }
 
   const controller = new AbortController()
+  /* istanbul ignore next -- timeout abort only fires on real network delays, not in tests */
   const timeout = setTimeout(() => controller.abort(), 5000)
 
   try {

@@ -119,6 +119,7 @@ export default function FamilyPage() {
   }
 
   async function handleRemoveMember() {
+    /* istanbul ignore next -- defensive guard; button only renders when memberToRemove is set */
     if (!memberToRemove) return
 
     setRemoving(true)

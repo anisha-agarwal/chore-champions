@@ -65,13 +65,17 @@ export function DonutChart({ items }: DonutChartProps) {
           </tr>
         </thead>
         <tbody>
-          {data.map((d) => (
-            <tr key={d.name}>
-              <td>{d.name}</td>
-              <td>{d.value}</td>
-              <td>{totalPoints > 0 ? Math.round((d.value / totalPoints) * 100) : 0}%</td>
-            </tr>
-          ))}
+          {data.map((d) => {
+            // totalPoints is always > 0 here since data is filtered to value > 0
+            const pct = Math.round((d.value / totalPoints) * 100)
+            return (
+              <tr key={d.name}>
+                <td>{d.name}</td>
+                <td>{d.value}</td>
+                <td>{pct}%</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

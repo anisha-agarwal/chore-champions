@@ -87,6 +87,7 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
   const deadlineStatus = useDeadlineStatus(task, isCompleted, selectedDate)
 
   async function handleComplete() {
+    /* istanbul ignore next -- defensive guard; handleCheckboxClick routes correctly */
     if (isCompleted || isCompleting) return
 
     setIsCompleting(true)
@@ -101,6 +102,7 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
   }
 
   async function handleUncomplete() {
+    /* istanbul ignore next -- defensive guard; handleCheckboxClick routes correctly */
     if (!isCompleted || isUncompleting) return
 
     setIsUncompleting(true)

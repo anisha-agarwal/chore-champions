@@ -102,9 +102,12 @@ export function StreakTab({ userId, userPoints }: StreakTabProps) {
     )
   }
 
+  const activeDayStreak = streaks?.active_day_streak ?? 0
+  const perfectDayStreak = streaks?.perfect_day_streak ?? 0
+
   const activeStreakCount = [
-    streaks?.active_day_streak ?? 0,
-    streaks?.perfect_day_streak ?? 0,
+    activeDayStreak,
+    perfectDayStreak,
     ...(streaks?.task_streaks?.map((t) => t.current_streak) ?? []),
   ].filter((s) => s > 0).length
 
@@ -122,10 +125,10 @@ export function StreakTab({ userId, userPoints }: StreakTabProps) {
       <StreakCard
         type="active_day"
         label="Active Day"
-        streak={streaks?.active_day_streak ?? 0}
+        streak={activeDayStreak}
         claimedMilestones={getClaimedDaysForStreak('active_day')}
         onClaimMilestone={(days) =>
-          handleClaimMilestone('active_day', null, days, streaks?.active_day_streak ?? 0)
+          handleClaimMilestone('active_day', null, days, activeDayStreak)
         }
       />
 
@@ -133,10 +136,10 @@ export function StreakTab({ userId, userPoints }: StreakTabProps) {
       <StreakCard
         type="perfect_day"
         label="Perfect Day"
-        streak={streaks?.perfect_day_streak ?? 0}
+        streak={perfectDayStreak}
         claimedMilestones={getClaimedDaysForStreak('perfect_day')}
         onClaimMilestone={(days) =>
-          handleClaimMilestone('perfect_day', null, days, streaks?.perfect_day_streak ?? 0)
+          handleClaimMilestone('perfect_day', null, days, perfectDayStreak)
         }
       />
 
