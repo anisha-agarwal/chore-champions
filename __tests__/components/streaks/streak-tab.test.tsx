@@ -39,9 +39,13 @@ function setupMocks(overrides?: {
   freezes?: { available: number; used: number } | null
   milestones?: typeof mockMilestones | null
 }) {
+  const hasStreaks = overrides !== undefined && 'streaks' in overrides
+  const hasFreezes = overrides !== undefined && 'freezes' in overrides
+  const hasMilestones = overrides !== undefined && 'milestones' in overrides
+
   mockRpc.mockImplementation((fn: string) => {
     if (fn === 'get_user_streaks') {
-      return Promise.resolve({ data: overrides?.streaks ?? mockStreaks })
+      return Promise.resolve({ data: hasStreaks ? overrides!.streaks : mockStreaks })
     }
     if (fn === 'claim_streak_milestone') {
       return Promise.resolve({ data: { success: true, bonus: 50, badge: 'Week Warrior' } })
@@ -57,11 +61,11 @@ function setupMocks(overrides?: {
       eq: () => {
         if (table === 'streak_freezes') {
           return {
-            single: () => Promise.resolve({ data: overrides?.freezes ?? { available: 2, used: 1 } }),
+            single: () => Promise.resolve({ data: hasFreezes ? overrides!.freezes : { available: 2, used: 1 } }),
           }
         }
         // streak_milestones
-        return Promise.resolve({ data: overrides?.milestones ?? mockMilestones })
+        return Promise.resolve({ data: hasMilestones ? overrides!.milestones : mockMilestones })
       },
     }),
   }))
@@ -157,7 +161,9 @@ describe('StreakTab', () => {
     render(<StreakTab userId="user-1" userPoints={100} />)
 
     await waitFor(() => {
-      expect(screen.getByText('0')).toBeInTheDocument()
+      // When streaks is null, all streak values default to 0
+      expect(screen.getByText('Active Day')).toBeInTheDocument()
+      expect(screen.getByTestId('streak-count-active_day')).toHaveTextContent('0')
     })
   })
 
@@ -335,6 +341,109 @@ describe('StreakTab', () => {
       p_task_id: '00000000-0000-0000-0000-000000000000',
       p_milestone_days: 7,
       p_current_streak: 7,
+    })
+  })
+
+  it('handles claim success with no bonus field (line 65 ?? 0 fallback)', async () => {
+    mockRpc.mockImplementation((fn: string) => {
+      if (fn === 'get_user_streaks') return Promise.resolve({ data: { ...mockStreaks, active_day_streak: 7 } })
+      // Return success but omit bonus to trigger the ?? 0 fallback in setPoints
+      if (fn === 'claim_streak_milestone') return Promise.resolve({ data: { success: true, badge: 'Week Warrior' } })
+      return Promise.resolve({ data: null })
+    })
+
+    const user = userEvent.setup()
+    render(<StreakTab userId="user-1" userPoints={100} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Active Day')).toBeInTheDocument()
+    })
+
+    const claimableButton = screen.getAllByLabelText(/Week Warrior.*claimable/)[0]
+    await user.click(claimableButton)
+
+    await waitFor(() => {
+      // bonus is undefined, so toast shows undefined but setPoints uses ?? 0 fallback
+      expect(toast.success).toHaveBeenCalled()
+    })
+  })
+
+  it('handles claim RPC returning null data', async () => {
+    mockRpc.mockImplementation((fn: string) => {
+      if (fn === 'get_user_streaks') return Promise.resolve({ data: { ...mockStreaks, active_day_streak: 7 } })
+      if (fn === 'claim_streak_milestone') return Promise.resolve({ data: null })
+      return Promise.resolve({ data: null })
+    })
+
+    const user = userEvent.setup()
+    render(<StreakTab userId="user-1" userPoints={100} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Active Day')).toBeInTheDocument()
+    })
+
+    const claimableButton = screen.getAllByLabelText(/Week Warrior.*claimable/)[0]
+    await user.click(claimableButton)
+
+    // Neither success nor error toast should fire when data is null
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('handles buy freeze RPC returning null data', async () => {
+    mockRpc.mockImplementation((fn: string) => {
+      if (fn === 'get_user_streaks') return Promise.resolve({ data: mockStreaks })
+      if (fn === 'buy_streak_freeze') return Promise.resolve({ data: null })
+      return Promise.resolve({ data: null })
+    })
+
+    const user = userEvent.setup()
+    render(<StreakTab userId="user-1" userPoints={100} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Streak Freezes')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /Buy Freeze/i }))
+
+    // Neither success nor error toast should fire when data is null
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('handles streaks with no task_streaks property', async () => {
+    setupMocks({
+      streaks: {
+        active_day_streak: 2,
+        perfect_day_streak: 0,
+        task_streaks: undefined as unknown as typeof mockStreaks.task_streaks,
+      },
+    })
+
+    render(<StreakTab userId="user-1" userPoints={100} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Active Day')).toBeInTheDocument()
+    })
+
+    // Should render without crashing; no task streak cards
+    expect(screen.queryByText('Make Bed')).not.toBeInTheDocument()
+  })
+
+  it('handles streaks with null task_streaks', async () => {
+    setupMocks({
+      streaks: {
+        active_day_streak: 0,
+        perfect_day_streak: 0,
+        task_streaks: null as unknown as typeof mockStreaks.task_streaks,
+      },
+    })
+
+    render(<StreakTab userId="user-1" userPoints={100} />)
+
+    await waitFor(() => {
+      // 0 active streaks
+      expect(screen.getByText(/active streak/)).toBeInTheDocument()
     })
   })
 

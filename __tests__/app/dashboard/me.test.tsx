@@ -24,6 +24,13 @@ jest.mock('@/components/streaks/streak-tab', () => ({
   ),
 }))
 
+// Mock KidStatsTab (loaded via dynamic import)
+jest.mock('@/components/analytics/kid-stats-tab', () => ({
+  KidStatsTab: ({ userId }: { userId: string }) => (
+    <div data-testid="kid-stats-tab">Stats for {userId}</div>
+  ),
+}))
+
 // Mock Supabase client
 const mockGetUser = jest.fn()
 const mockSignOut = jest.fn()
@@ -817,6 +824,23 @@ describe('Me Page', () => {
       await user.click(screen.getByRole('button', { name: 'Streaks' }))
 
       expect(screen.getByText('Streak Tab for user-123 with 100 points')).toBeInTheDocument()
+    })
+
+    it('switches to stats tab and shows KidStatsTab', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Stats' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('kid-stats-tab')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Stats for user-123')).toBeInTheDocument()
+      expect(screen.queryByText('Personal Info')).not.toBeInTheDocument()
     })
   })
 

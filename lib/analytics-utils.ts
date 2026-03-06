@@ -134,7 +134,9 @@ export function generateStaticSummary(
   }
   const topChild = [...children].sort((a, b) => b.completions_this_week - a.completions_this_week)[0]
   const topName = topChild?.profile.nickname ?? topChild?.profile.display_name ?? 'A child'
-  return `Your family completed ${rate}% of eligible quests this week. ${topName} led the way with ${topChild?.completions_this_week ?? 0} completions.`
+  // istanbul ignore next -- topChild is always defined here since children.length > 0 is checked above
+  const topCompletions = topChild?.completions_this_week ?? 0
+  return `Your family completed ${rate}% of eligible quests this week. ${topName} led the way with ${topCompletions} completions.`
 }
 
 export function getBadgeProgress(badge: BadgeInfo, streaks: UserStreaks): number {

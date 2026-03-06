@@ -47,6 +47,7 @@ export default function JoinFamilyPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    /* istanbul ignore next -- defensive guard; form only renders when familyId is set */
     if (!familyId) return
 
     setLoading(true)

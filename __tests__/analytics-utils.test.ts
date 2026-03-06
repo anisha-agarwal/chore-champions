@@ -303,6 +303,32 @@ describe('generateStaticSummary', () => {
     expect(summary).not.toContain('1 quests')
   })
 
+  it('sorts multiple children to find the top performer', () => {
+    const familyStats: FamilyAnalytics = {
+      children: [
+        {
+          profile: { id: '1', display_name: 'Alice', nickname: null, avatar_url: null, points: 50 },
+          completions_this_week: 3,
+          completions_last_week: 2,
+          completion_rate: 0.5,
+        },
+        {
+          profile: { id: '2', display_name: 'Bob', nickname: null, avatar_url: null, points: 80 },
+          completions_this_week: 10,
+          completions_last_week: 7,
+          completion_rate: 0.9,
+        },
+      ],
+      daily_totals: [],
+      top_tasks: [],
+      bottom_tasks: [],
+      family_completion_rate: 0.7,
+    }
+    const summary = generateStaticSummary(familyStats, 'parent')
+    expect(summary).toContain('Bob')
+    expect(summary).toContain('10 completions')
+  })
+
   it('uses nickname when available for top child in parent summary', () => {
     const familyStats: FamilyAnalytics = {
       children: [

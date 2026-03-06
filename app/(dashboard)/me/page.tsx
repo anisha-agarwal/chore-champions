@@ -81,6 +81,7 @@ export default function MePage() {
   }, [fetchProfile])
 
   async function handleSave() {
+    /* istanbul ignore next -- defensive guard; Save button only renders when profile is loaded */
     if (!profile) return
 
     setSaving(true)
@@ -110,6 +111,7 @@ export default function MePage() {
   }
 
   async function handleAvatarSelect(avatarUrl: string) {
+    /* istanbul ignore next -- defensive guard; avatar modal only renders when profile is loaded */
     if (!profile) return
 
     const { error } = await supabase

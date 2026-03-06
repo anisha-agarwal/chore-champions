@@ -25,6 +25,7 @@ export function InviteModal({ isOpen, onClose, inviteCode, familyId, currentUser
 
   const supabase = createClient()
 
+  // istanbul ignore next -- SSR fallback cannot be tested in JSDOM
   const inviteLink = typeof window !== 'undefined'
     ? `${window.location.origin}/join/${inviteCode}`
     : `/join/${inviteCode}`

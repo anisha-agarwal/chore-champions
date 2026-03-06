@@ -57,6 +57,7 @@ export function StreakHeatmap({ data, weeks = 52 }: StreakHeatmapProps) {
     let lastMonth = -1
     for (let col = 0; col < cells.length; col++) {
       const firstCell = cells[col].find((c) => c !== null)
+      /* istanbul ignore else -- every column always has at least one non-null cell */
       if (firstCell) {
         const month = new Date(firstCell.date + 'T00:00:00').getMonth()
         if (month !== lastMonth) {

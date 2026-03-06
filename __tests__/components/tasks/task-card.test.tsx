@@ -346,6 +346,23 @@ describe('TaskCard', () => {
     })
   })
 
+  describe('Recurring task with selectedDate and dueTime (lines 34, 63)', () => {
+    it('uses selectedDate for recurring task deadline', () => {
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2024-01-15T12:00:00'))
+      const recurringTaskWithTime: TaskWithAssignee = {
+        ...mockTask,
+        recurring: 'daily',
+        due_date: null,
+        due_time: '14:30:00',
+      }
+      render(<TaskCard task={recurringTaskWithTime} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockParentUser} selectedDate={new Date('2024-01-15')} />)
+      // Should show due time badge since recurring + selectedDate provides dateStr
+      expect(screen.getByTestId('due-time-badge')).toBeInTheDocument()
+      jest.useRealTimers()
+    })
+  })
+
   describe('No due_date (null) branch', () => {
     it('handles task with no due_date (computeDeadlineStatus line 35 and useEffect line 63)', () => {
       jest.useFakeTimers()
