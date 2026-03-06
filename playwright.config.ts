@@ -66,6 +66,24 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: /auth\.spec\.ts/,
     },
+    // Visual regression tests - public pages (no auth)
+    {
+      name: 'visual-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /visual\.spec\.ts/,
+      grep: /Visual regression - public pages/,
+    },
+    // Visual regression tests - authenticated pages (parent auth)
+    {
+      name: 'visual-auth',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/parent.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /visual\.spec\.ts/,
+      grep: /Visual regression - authenticated pages/,
+    },
   ],
   webServer: {
     command: 'npm run dev',

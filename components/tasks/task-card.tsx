@@ -52,6 +52,7 @@ function useDeadlineStatus(task: TaskWithAssignee, isCompleted: boolean, selecte
   // Recompute whenever task props change OR tick increments (every 60s)
   const currentStatus = useMemo(
     () => computeDeadlineStatus(task.due_time, task.due_date, task.recurring, isCompleted, selectedDate),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick is intentionally included to force re-computation every 60s
     [task.due_time, task.due_date, task.recurring, isCompleted, selectedDate, tick]
   )
 

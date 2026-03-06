@@ -187,6 +187,18 @@ export type Database = {
         Args: { p_user_id: string; p_streak_type: string; p_task_id: string; p_milestone_days: number; p_current_streak: number }
         Returns: { success: boolean; error?: string; bonus?: number; badge?: string }
       }
+      get_kid_analytics: {
+        Args: { p_user_id: string; p_weeks?: number }
+        Returns: KidAnalytics
+      }
+      get_kid_heatmap: {
+        Args: { p_user_id: string }
+        Returns: KidHeatmap
+      }
+      get_family_analytics: {
+        Args: { p_family_id: string; p_weeks?: number }
+        Returns: FamilyAnalytics
+      }
     }
   }
 }
@@ -252,6 +264,68 @@ export type ClaimedMilestone = {
   milestone_days: number
   points_awarded: number
   badge_name: string
+}
+
+// Analytics types
+export type Level = {
+  level: number
+  name: string
+  minPoints: number
+}
+
+export type DailyPoint = {
+  date: string        // ISO date (YYYY-MM-DD)
+  points: number      // total points earned
+  completions: number // tasks completed
+}
+
+export type TaskFrequency = {
+  task_id: string
+  title: string
+  count: number
+}
+
+export type ChildStats = {
+  profile: Pick<Profile, 'id' | 'display_name' | 'nickname' | 'avatar_url' | 'points'>
+  completions_this_week: number
+  completions_last_week: number
+  completion_rate: number // 0-1
+}
+
+export type KidAnalytics = {
+  daily_points: DailyPoint[]
+  task_breakdown: TaskFrequency[]
+  milestones: BadgeInfo[]
+  total_points: number
+  completions_this_week: number
+  completions_last_week: number
+}
+
+export type KidHeatmap = {
+  heatmap_data: DailyPoint[] // always 52 weeks
+}
+
+export type BadgeInfo = {
+  badge_name: string
+  milestone_days: number
+  streak_type: 'active_day' | 'perfect_day' | 'task'
+  task_id: string | null
+  claimed_at: string | null
+}
+
+export type FamilyAnalytics = {
+  children: ChildStats[]
+  daily_totals: DailyPoint[]
+  top_tasks: TaskFrequency[]
+  bottom_tasks: TaskFrequency[]
+  family_completion_rate: number // 0-1
+}
+
+export type AnalyticsTimeRange = 4 | 12 | 26 // weeks
+
+export type AnalyticsInsight = {
+  narrative: string | null
+  generated_at: string
 }
 
 // Avatar options

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { createTestTask, getTaskCard, cleanupTestTask, completeTask, uncompleteTask } from './helpers'
+import { createTestTask, cleanupTestTask, completeTask, uncompleteTask } from './helpers'
 
 // All fallback messages from lib/encouragement.ts (points category is default for 10-pt tasks)
 const ALL_FALLBACK_MESSAGES = [
