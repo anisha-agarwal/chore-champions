@@ -151,6 +151,7 @@ jobs:
             git add e2e/visual.spec.ts-snapshots/*-linux.png
             git commit -m "chore: add Linux visual snapshots [skip ci]"
             git push
+            sleep 10
           fi
 
       - name: Run E2E tests
