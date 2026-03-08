@@ -106,6 +106,7 @@ function ObservabilityDashboard() {
       void refreshAll(range, errorPage)
     }, REFRESH_INTERVAL_MS)
     return () => {
+      /* istanbul ignore next -- cleanup guard: intervalRef is always set by setInterval above */
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
   }, [range, errorPage, refreshAll])

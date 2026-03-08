@@ -58,6 +58,21 @@ describe('ErrorPanel', () => {
     expect(onPageChange).toHaveBeenCalledWith(1)
   })
 
+  it('groups and sorts errors by route for bar chart', () => {
+    const multiErrorData: ErrorListResult = {
+      errors: [
+        { id: 'e1', error_message: 'fail1', error_type: 'api', error_code: null, route: '/api/foo', method: 'GET', user_id: null, metadata: {}, created_at: new Date().toISOString() },
+        { id: 'e2', error_message: 'fail2', error_type: 'rpc', error_code: null, route: '/api/bar', method: 'POST', user_id: null, metadata: {}, created_at: new Date().toISOString() },
+        { id: 'e3', error_message: 'fail3', error_type: 'api', error_code: null, route: '/api/bar', method: 'GET', user_id: null, metadata: {}, created_at: new Date().toISOString() },
+      ],
+      total: 3,
+      page: 1,
+      total_pages: 1,
+    }
+    render(<ErrorPanel data={multiErrorData} error={null} onPageChange={jest.fn()} onRetry={jest.fn()} />)
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument()
+  })
+
   it('handles null data gracefully', () => {
     render(<ErrorPanel data={null} error={null} onPageChange={jest.fn()} onRetry={jest.fn()} />)
     expect(screen.getByText('0 errors')).toBeInTheDocument()

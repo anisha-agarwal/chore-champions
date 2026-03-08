@@ -36,10 +36,12 @@ export class ObservabilityErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    /* istanbul ignore next -- window is always defined in browser; guard is for SSR safety */
+    const route = typeof window !== 'undefined' ? window.location.pathname : 'unknown'
     logClientError({
       error_message: error.message,
       error_type: 'boundary',
-      route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+      route,
       metadata: {
         componentStack: errorInfo.componentStack?.slice(0, 500),
       },

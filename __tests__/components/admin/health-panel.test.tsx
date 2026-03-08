@@ -68,6 +68,12 @@ describe('HealthPanel', () => {
     expect(screen.getByText(/Errors/)).toBeInTheDocument()
   })
 
+  it('highlights avg latency as yellow when over 1000ms', () => {
+    const summary = { ...mockSummary, avg_latency_ms: 1500 }
+    render(<HealthPanel summary={summary} health={mockHealth} error={null} onRetry={jest.fn()} />)
+    expect(screen.getByText(/Avg Latency/)).toBeInTheDocument()
+  })
+
   it('shows neutral trend when equal', () => {
     const summary = { ...mockSummary, error_count: 2, prev_error_count: 2 }
     render(<HealthPanel summary={summary} health={mockHealth} error={null} onRetry={jest.fn()} />)

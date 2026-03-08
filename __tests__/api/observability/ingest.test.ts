@@ -122,6 +122,18 @@ describe('POST /api/observability/ingest', () => {
     expect(mockLogError).toHaveBeenCalledTimes(1)
   })
 
+  it('handles unknown payload type gracefully (no-op)', async () => {
+    mockValidate.mockReturnValueOnce({
+      ok: true,
+      payload: { type: 'unknown' },
+    })
+    const req = makeRequest({ type: 'unknown' }, VALID_TOKEN)
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    expect(mockLogError).not.toHaveBeenCalled()
+    expect(mockTrackEvent).not.toHaveBeenCalled()
+  })
+
   it('returns 413 when body exceeds size limit', async () => {
     mockValidate.mockReturnValueOnce({ ok: true, payload: { type: 'event', data: { event_type: 'page_view' } } })
     const largeBody = JSON.stringify({ type: 'event', data: { event_type: 'page_view', extra: 'x'.repeat(9000) } })

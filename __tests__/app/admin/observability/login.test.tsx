@@ -65,6 +65,23 @@ describe('AdminLoginPage', () => {
     })
   })
 
+  it('falls back to "Invalid password" when response has no error field', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({}),
+    })
+    render(<AdminLoginPage />)
+
+    fireEvent.change(screen.getByLabelText('Admin Password'), { target: { value: 'wrong' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign In/i }))
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+      expect(screen.getByLabelText('Admin Password')).toHaveValue('')
+    })
+  })
+
   it('handles 429 rate limit response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

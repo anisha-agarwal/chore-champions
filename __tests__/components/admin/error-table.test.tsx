@@ -132,6 +132,21 @@ describe('ErrorTable', () => {
     expect(screen.getByText(/Metadata/)).toBeInTheDocument()
   })
 
+  it('handles null metadata without crashing', () => {
+    render(
+      <ErrorTable
+        errors={[makeError({ metadata: null as unknown as Record<string, unknown> })]}
+        total={1}
+        page={1}
+        totalPages={1}
+        onPageChange={mockPageChange}
+      />
+    )
+    fireEvent.click(screen.getByText('Something failed'))
+    // Should not show Metadata section when metadata is null
+    expect(screen.queryByText('Metadata:')).not.toBeInTheDocument()
+  })
+
   it('handles unknown error type gracefully', () => {
     render(
       <ErrorTable

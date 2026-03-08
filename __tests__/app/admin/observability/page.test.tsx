@@ -169,6 +169,163 @@ describe('ObservabilityDashboard', () => {
     expect(mockFetch.mock.calls.length).toBeGreaterThan(callsAfterMount)
   })
 
+  it('shows error state when API returns non-401 failure', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/health')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ supabase: 'ok' }) })
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'Internal error' }) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    // Panels should show retry buttons due to error state
+    await waitFor(() => {
+      expect(screen.getByText('retry-health')).toBeInTheDocument()
+      expect(screen.getByText('retry-errors')).toBeInTheDocument()
+      expect(screen.getByText('retry-perf')).toBeInTheDocument()
+      expect(screen.getByText('retry-usage')).toBeInTheDocument()
+    })
+  })
+
+  it('retries individual panels on retry button click', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/health')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ supabase: 'ok' }) })
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    // Now switch to successful fetch for retries
+    setupSuccessfulFetch()
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('retry-health'))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('retry-errors'))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('retry-perf'))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('retry-usage'))
+    })
+  })
+
+  it('handles successful cleanup', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cleanup')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ errors_deleted: 5, events_deleted: 10 }) })
+      if (url.includes('/summary')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ error_count: 0 }) })
+      if (url.includes('/health')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ supabase: 'ok' }) })
+      if (url.includes('/errors')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ errors: [], total: 0, page: 1, total_pages: 1 }) })
+      if (url.includes('/performance')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+      if (url.includes('/usage')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+  })
+
+  it('handles cleanup 401 redirect', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cleanup')) return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+
+    expect(mockPush).toHaveBeenCalledWith('/admin/observability/login')
+  })
+
+  it('handles cleanup failure', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cleanup')) return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'DB error' }) })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+  })
+
+  it('handles cleanup failure with no error field in response', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cleanup')) return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+  })
+
+  it('handles cleanup network error', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cleanup')) return Promise.reject(new Error('Network error'))
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+  })
+
+  it('handles cleanup non-Error throw with fallback message', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      // eslint-disable-next-line prefer-promise-reject-errors
+      if (url.includes('/cleanup')) return Promise.reject('string-error')
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cleanup (90d)'))
+    })
+  })
+
+  it('uses 30d range for usage when range is 30d', async () => {
+    await act(async () => {
+      render(<ObservabilityDashboard />)
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('30d'))
+    })
+
+    const usageUrls = mockFetch.mock.calls.filter((c: unknown[]) => (c[0] as string).includes('/usage')).map((c: unknown[]) => c[0])
+    expect(usageUrls.some((u: string) => u.includes('range=30d'))).toBe(true)
+  })
+
   it('changes error page via panel callback', async () => {
     await act(async () => {
       render(<ObservabilityDashboard />)

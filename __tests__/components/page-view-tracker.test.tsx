@@ -5,15 +5,21 @@ jest.mock('@/lib/observability/client-logger', () => ({
   logClientEvent: jest.fn(),
 }))
 
+const mockUsePathname = jest.fn<string | null, []>().mockReturnValue('/quests')
+jest.mock('next/navigation', () => ({
+  ...jest.requireActual('next/navigation'),
+  usePathname: () => mockUsePathname(),
+}))
+
 import { PageViewTracker } from '@/components/page-view-tracker'
 import { logClientEvent } from '@/lib/observability/client-logger'
 
 const mockLogClientEvent = logClientEvent as jest.Mock
 
-// jest.setup.ts mocks usePathname to return '/quests'
 describe('PageViewTracker', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockUsePathname.mockReturnValue('/quests')
   })
 
   it('renders nothing (null)', () => {
@@ -33,5 +39,11 @@ describe('PageViewTracker', () => {
     const { rerender } = render(<PageViewTracker />)
     rerender(<PageViewTracker />)
     expect(mockLogClientEvent).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not log when pathname is null', () => {
+    mockUsePathname.mockReturnValue(null)
+    render(<PageViewTracker />)
+    expect(mockLogClientEvent).not.toHaveBeenCalled()
   })
 })

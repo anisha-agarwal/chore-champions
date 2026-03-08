@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   let rawBody: string
   try {
     rawBody = await request.text()
-  } catch {
+  } catch /* istanbul ignore next -- defensive: request.text() only throws on stream errors */ {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 

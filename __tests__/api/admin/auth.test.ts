@@ -107,6 +107,34 @@ describe('POST /api/admin/auth', () => {
     expect(res.status).toBe(200)
   })
 
+  it('treats null count as zero (allows attempt)', async () => {
+    mockCreateServiceClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            gte: jest.fn().mockResolvedValue({ count: null, error: null }),
+          }),
+        }),
+        insert: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    })
+    mockVerifyAdminPassword.mockReturnValue(true)
+
+    const req = makeRequest({ password: 'correct' }, '1.2.3.4')
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+  })
+
+  it('hashes IP without ADMIN_SESSION_SECRET when env var is unset', async () => {
+    delete process.env.ADMIN_SESSION_SECRET
+    setupSupabaseRateLimit(0)
+    mockVerifyAdminPassword.mockReturnValue(true)
+
+    const req = makeRequest({ password: 'correct' }, '1.2.3.4')
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+  })
+
   it('allows when rate limit check throws', async () => {
     mockCreateServiceClient.mockReturnValue({
       from: jest.fn().mockReturnValue({
