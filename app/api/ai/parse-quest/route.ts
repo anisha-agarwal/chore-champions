@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { snapToNearest, matchAssignee, VALID_POINTS } from '@/lib/parse-quest'
+import { trackEvent } from '@/lib/observability/event-tracker'
+import { withObservability } from '@/lib/observability/middleware-timing'
 import type { ParseQuestResponse } from '@/lib/parse-quest'
 
-export async function POST(request: Request) {
+async function handler(request: NextRequest): Promise<NextResponse> {
   // Auth check
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -151,9 +153,12 @@ export async function POST(request: Request) {
       assigned_to: matchAssignee(input.assigned_to, members),
     }
 
+    trackEvent({ event_type: 'ai_quest_parsed', user_id: user.id, metadata: {} })
     return NextResponse.json({ prefill } satisfies ParseQuestResponse)
   } catch {
     clearTimeout(timeout)
     return NextResponse.json({ prefill: null } satisfies ParseQuestResponse)
   }
 }
+
+export const POST = withObservability(handler)
