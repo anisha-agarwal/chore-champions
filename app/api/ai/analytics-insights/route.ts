@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateStaticSummary } from '@/lib/analytics-utils'
+import { trackEvent } from '@/lib/observability/event-tracker'
+import { withObservability } from '@/lib/observability/middleware-timing'
 import type { KidAnalytics, FamilyAnalytics } from '@/lib/types'
 
 const KID_SYSTEM_PROMPT =
@@ -15,7 +17,7 @@ const PARENT_SYSTEM_PROMPT =
   'Highlight which children improved, flag declining engagement, and note standout tasks. ' +
   'Tone: supportive and actionable.'
 
-export async function POST(request: Request) {
+async function handler(request: NextRequest): Promise<NextResponse> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
 
     const result = await response.json()
     const narrative = result.content?.[0]?.text?.trim() ?? null
+    trackEvent({ event_type: 'ai_insight_generated', user_id: user.id, metadata: { role } })
     return NextResponse.json({ narrative, generated_at: new Date().toISOString() })
   } catch {
     clearTimeout(timeout)
@@ -108,3 +111,5 @@ export async function POST(request: Request) {
     })
   }
 }
+
+export const POST = withObservability(handler)

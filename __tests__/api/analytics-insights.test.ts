@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
+jest.mock('@/lib/observability/middleware-timing', () => ({
+  withObservability: (h: unknown) => h,
+}))
+
 import { POST } from '@/app/api/ai/analytics-insights/route'
+import { NextRequest } from 'next/server'
 
 // Mock Supabase server client
 const mockGetUser = jest.fn()
@@ -27,15 +32,15 @@ import { generateStaticSummary } from '@/lib/analytics-utils'
 // Store original fetch
 const originalFetch = global.fetch
 
-function makeRequest(body?: unknown): Request {
+function makeRequest(body?: unknown): NextRequest {
   if (body === undefined) {
-    return new Request('http://localhost:3000/api/ai/analytics-insights', {
+    return new NextRequest('http://localhost:3000/api/ai/analytics-insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid-json!!!',
     })
   }
-  return new Request('http://localhost:3000/api/ai/analytics-insights', {
+  return new NextRequest('http://localhost:3000/api/ai/analytics-insights', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -101,7 +106,7 @@ describe('POST /api/ai/analytics-insights', () => {
   it('returns null narrative on invalid JSON body', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
 
-    const request = new Request('http://localhost:3000/api/ai/analytics-insights', {
+    const request = new NextRequest('http://localhost:3000/api/ai/analytics-insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'not-valid-json',

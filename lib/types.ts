@@ -328,6 +328,104 @@ export type AnalyticsInsight = {
   generated_at: string
 }
 
+// Observability types
+export type AppError = {
+  id: string
+  error_message: string
+  error_type: 'rpc' | 'api' | 'client' | 'boundary' | 'middleware'
+  error_code: string | null
+  route: string
+  method: string | null
+  user_id: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export type AppEvent = {
+  id: string
+  event_type: string
+  user_id: string | null
+  family_id: string | null
+  metadata: Record<string, unknown>
+  duration_ms: number | null
+  created_at: string
+}
+
+export type ObservabilitySummary = {
+  error_count: number
+  prev_error_count: number
+  active_users: number
+  avg_latency_ms: number
+  error_rate_trend: Array<{ time: string; count: number }>
+  top_errors: Array<{ error_message: string; route: string; count: number }>
+  route_latency: Array<{ route: string; p95_ms: number; avg_ms: number; count: number }>
+}
+
+export type RouteLatency = {
+  route: string
+  p95_ms: number
+  avg_ms: number
+  min_ms: number
+  max_ms: number
+  count: number
+}
+
+export type RpcTiming = {
+  rpc_name: string
+  p95_ms: number
+  avg_ms: number
+  min_ms: number
+  max_ms: number
+  count: number
+}
+
+export type LatencyTrend = {
+  time: string
+  avg_ms: number
+}
+
+export type PerformanceMetrics = {
+  route_latency: RouteLatency[]
+  rpc_timing: RpcTiming[]
+  latency_trend: LatencyTrend[]
+}
+
+export type DailyActiveUsers = {
+  date: string
+  users: number
+}
+
+export type ChoreFrequency = {
+  task_name: string
+  count: number
+}
+
+export type PeakHour = {
+  hour: number
+  count: number
+}
+
+export type AiCallVolume = {
+  date: string
+  count: number
+}
+
+export type UsageAnalytics = {
+  daily_active_users: DailyActiveUsers[]
+  top_chores: ChoreFrequency[]
+  least_chores: ChoreFrequency[]
+  peak_hours: PeakHour[]
+  ai_call_volume: AiCallVolume[]
+  event_counts: Record<string, number>
+}
+
+export type ErrorListResult = {
+  errors: AppError[]
+  total: number
+  page: number
+  total_pages: number
+}
+
 // Avatar options
 export const AVATAR_OPTIONS = [
   { id: 'panther', name: 'Panther', url: '/avatars/panther.svg' },
