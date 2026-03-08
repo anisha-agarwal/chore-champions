@@ -35,6 +35,13 @@ describe('verifyAdminPassword', () => {
     expect(verifyAdminPassword('short')).toBe(false)
     expect(verifyAdminPassword('this-is-a-very-long-wrong-password-attempt')).toBe(false)
   })
+
+  it('handles timing-safe comparison where chars match but lengths differ', () => {
+    // Input is a prefix of the expected password — chars match up to shorter length
+    // but lengths differ, so it must still return false
+    expect(verifyAdminPassword('test-password')).toBe(false)
+    expect(verifyAdminPassword('test-password-123-extra')).toBe(false)
+  })
 })
 
 describe('createAdminSession + validateAdminSession', () => {
@@ -74,6 +81,32 @@ describe('createAdminSession + validateAdminSession', () => {
   it('throws when env vars missing for createAdminSession', async () => {
     delete process.env.ADMIN_SESSION_SECRET
     await expect(createAdminSession()).rejects.toThrow()
+  })
+
+  it('returns false for expired token', async () => {
+    const token = await createAdminSession()
+    // Decode, set exp to the past, re-sign
+    const secret = process.env.ADMIN_SESSION_SECRET!
+    const password = process.env.ADMIN_OBSERVABILITY_PASSWORD!
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+
+    // Derive session version
+    const vSig = await crypto.subtle.sign('HMAC', key, encoder.encode(`version:${password}`))
+    const v = Buffer.from(vSig).toString('base64url').slice(0, 8)
+
+    const expiredPayload = JSON.stringify({ exp: Date.now() - 1000, v })
+    const b64 = Buffer.from(expiredPayload).toString('base64url')
+    const sigBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(b64))
+    const sig = Buffer.from(sigBuffer).toString('base64url')
+
+    expect(await validateAdminSession(`${b64}.${sig}`)).toBe(false)
   })
 
   it('returns false for token with invalid base64 payload', async () => {

@@ -165,6 +165,9 @@ jobs:
           TEST_CHILD_PASSWORD: ${{ secrets.TEST_CHILD_PASSWORD }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          ADMIN_OBSERVABILITY_PASSWORD: ${{ secrets.ADMIN_OBSERVABILITY_PASSWORD }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
+          NEXT_PUBLIC_OBSERVABILITY_INGEST_TOKEN: ${{ secrets.NEXT_PUBLIC_OBSERVABILITY_INGEST_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

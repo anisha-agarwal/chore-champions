@@ -152,11 +152,54 @@ describe('validateIngestPayload', () => {
       }
     })
 
+    it('parses error items in batch with truncation and metadata', () => {
+      const longMsg = 'x'.repeat(2000)
+      const result = validateIngestPayload({
+        type: 'batch',
+        items: [
+          { type: 'error', data: { error_message: longMsg, error_type: 'rpc', route: '/api/data', metadata: { route: '/api/data' } } },
+        ],
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok && result.payload.type === 'batch') {
+        expect(result.payload.items.length).toBe(1)
+        const item = result.payload.items[0]
+        expect(item.type).toBe('error')
+        if (item.type === 'error') {
+          expect(item.data.error_message.length).toBe(1000)
+          expect(item.data.route).toBe('/api/data')
+        }
+      }
+    })
+
+    it('parses event items in batch with duration_ms', () => {
+      const result = validateIngestPayload({
+        type: 'batch',
+        items: [
+          { type: 'event', data: { event_type: 'rpc_call', duration_ms: 42.7, metadata: { rpcName: 'get_data' } } },
+          { type: 'event', data: { event_type: 'page_view' } },
+        ],
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok && result.payload.type === 'batch') {
+        expect(result.payload.items.length).toBe(2)
+        const first = result.payload.items[0]
+        if (first.type === 'event') {
+          expect(first.data.duration_ms).toBe(42)
+          expect(first.data.event_type).toBe('rpc_call')
+        }
+        const second = result.payload.items[1]
+        if (second.type === 'event') {
+          expect(second.data.duration_ms).toBeUndefined()
+        }
+      }
+    })
+
     it('skips invalid items in batch', () => {
       const result = validateIngestPayload({
         type: 'batch',
         items: [
-          { type: 'event', data: { event_type: 'invalid_event' } }, // invalid
+          { type: 'event', data: { event_type: 'invalid_event' } }, // invalid event
           { type: 'event', data: { event_type: 'page_view' } },     // valid
           null,                                                       // null item
         ],
@@ -164,6 +207,22 @@ describe('validateIngestPayload', () => {
       expect(result.ok).toBe(true)
       if (result.ok && result.payload.type === 'batch') {
         expect(result.payload.items.length).toBe(1)
+      }
+    })
+
+    it('skips invalid error items and unknown types in batch', () => {
+      const result = validateIngestPayload({
+        type: 'batch',
+        items: [
+          { type: 'error', data: { error_message: '', error_type: 'api', route: '/test' } }, // empty message — fails validation
+          { type: 'other', data: {} },                                                         // unknown type — skipped
+          { type: 'event', data: { event_type: 'page_view' } },                               // valid
+        ],
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok && result.payload.type === 'batch') {
+        expect(result.payload.items.length).toBe(1)
+        expect(result.payload.items[0].type).toBe('event')
       }
     })
   })
