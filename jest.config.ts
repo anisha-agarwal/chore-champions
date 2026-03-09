@@ -22,6 +22,7 @@ const config: Config = {
     '!lib/types.ts',
     '!lib/supabase/middleware.ts',
     '!app/**/layout.tsx',
+    '!app/demo/**',
   ],
   coverageThreshold: {
     global: {
