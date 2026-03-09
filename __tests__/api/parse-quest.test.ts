@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
+jest.mock('@/lib/observability/middleware-timing', () => ({
+  withObservability: (h: unknown) => h,
+}))
+
 import { POST } from '@/app/api/ai/parse-quest/route'
+import { NextRequest } from 'next/server'
 
 // Mock Supabase server client
 const mockGetUser = jest.fn()
@@ -46,7 +51,7 @@ function setupAuthenticatedUser() {
 }
 
 function makeRequest(body: unknown) {
-  return new Request('http://localhost:3000/api/ai/parse-quest', {
+  return new NextRequest('http://localhost:3000/api/ai/parse-quest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: typeof body === 'string' ? body : JSON.stringify(body),

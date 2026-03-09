@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { trackEvent } from '@/lib/observability/event-tracker'
+import { withObservability } from '@/lib/observability/middleware-timing'
 import type { EncouragementContext } from '@/lib/encouragement'
 
-export async function POST(request: Request) {
+async function handler(request: NextRequest): Promise<NextResponse> {
   // Auth check
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
     const data = await response.json()
     const message = data?.content?.[0]?.text?.trim() || null
 
+    trackEvent({ event_type: 'ai_encouragement_generated', user_id: user.id, metadata: { taskName: context.taskTitle } })
     return NextResponse.json({
       message,
       isMilestone: context.isMilestone,
@@ -81,3 +84,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: null })
   }
 }
+
+export const POST = withObservability(handler)

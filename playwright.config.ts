@@ -66,6 +66,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: /auth\.spec\.ts/,
     },
+    // Admin observability dashboard tests - own password auth
+    {
+      name: 'admin',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /admin-observability\.spec\.ts/,
+    },
     // Visual regression tests - public pages (no auth)
     {
       name: 'visual-public',

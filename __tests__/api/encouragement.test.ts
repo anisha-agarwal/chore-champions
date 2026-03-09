@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
+jest.mock('@/lib/observability/middleware-timing', () => ({
+  withObservability: (h: unknown) => h,
+}))
+
 import { POST } from '@/app/api/ai/encouragement/route'
+import { NextRequest } from 'next/server'
 
 // Mock Supabase server client
 const mockGetUser = jest.fn()
@@ -43,7 +48,7 @@ describe('POST /api/ai/encouragement', () => {
   it('returns 401 when user is not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -66,7 +71,7 @@ describe('POST /api/ai/encouragement', () => {
       }),
     })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -84,7 +89,7 @@ describe('POST /api/ai/encouragement', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
     delete process.env.ANTHROPIC_API_KEY
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -103,7 +108,7 @@ describe('POST /api/ai/encouragement', () => {
       status: 500,
     })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -119,7 +124,7 @@ describe('POST /api/ai/encouragement', () => {
 
     global.fetch = jest.fn().mockRejectedValue(new Error('AbortError'))
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -146,7 +151,7 @@ describe('POST /api/ai/encouragement', () => {
       milestoneType: '100-points',
     }
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(milestoneContext),
@@ -170,7 +175,7 @@ describe('POST /api/ai/encouragement', () => {
 
     const overdueContext = { ...validContext, isOverdue: true }
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(overdueContext),
@@ -190,7 +195,7 @@ describe('POST /api/ai/encouragement', () => {
   it('returns { message: null } on invalid JSON body', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid-json',
@@ -221,7 +226,7 @@ describe('POST /api/ai/encouragement', () => {
       })
     })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
@@ -244,7 +249,7 @@ describe('POST /api/ai/encouragement', () => {
       }),
     })
 
-    const request = new Request('http://localhost:3000/api/ai/encouragement', {
+    const request = new NextRequest('http://localhost:3000/api/ai/encouragement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validContext),
