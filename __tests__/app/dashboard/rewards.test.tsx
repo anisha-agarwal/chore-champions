@@ -148,11 +148,19 @@ jest.mock('@/lib/supabase/client', () => ({
       }
       if (table === 'rewards') {
         return {
-          select: () => ({
-            eq: () => ({
-              order: () => Promise.resolve({ data: mockState.rewards }),
-            }),
-          }),
+          select: (_cols: string, opts?: { count?: string; head?: boolean }) => {
+            // Seed check: select('*', { count: 'exact', head: true })
+            if (opts?.head) {
+              return {
+                eq: () => Promise.resolve({ count: (mockState.rewards ?? []).length }),
+              }
+            }
+            return {
+              eq: () => ({
+                order: () => Promise.resolve({ data: mockState.rewards }),
+              }),
+            }
+          },
           insert: (data: unknown) => mockInsert(data),
           update: (data: unknown) => ({
             eq: (...args: unknown[]) => mockUpdate(data, ...args),
@@ -668,6 +676,37 @@ describe('RewardsPage', () => {
       const modal = screen.getByText('Reject Reward?').closest('div')!
       await userEvent.click(within(modal).getByRole('button', { name: /^Reject$/ }))
       await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    })
+  })
+
+  describe('Default reward seeding', () => {
+    it('seeds default rewards when parent loads page with no rewards', async () => {
+      mockState.rewards = []
+      render(<RewardsPage />)
+      await waitFor(() => {
+        expect(mockInsert).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ title: '30 Min Screen Time', family_id: 'family-1', created_by: 'user-parent' }),
+          ])
+        )
+      })
+    })
+
+    it('does not seed when rewards already exist', async () => {
+      mockState.rewards = mockRewards
+      render(<RewardsPage />)
+      await waitFor(() => expect(screen.getByText('Movie Night')).toBeInTheDocument())
+      expect(mockInsert).not.toHaveBeenCalled()
+    })
+
+    it('does not seed for child users', async () => {
+      mockState.rewards = []
+      mockState.user = mockChildUser
+      mockState.profile = mockChildProfile
+      mockGetUser.mockResolvedValue({ data: { user: mockChildUser } })
+      render(<RewardsPage />)
+      await waitFor(() => expect(screen.getByText('No rewards available yet.')).toBeInTheDocument())
+      expect(mockInsert).not.toHaveBeenCalled()
     })
   })
 })

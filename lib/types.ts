@@ -548,6 +548,24 @@ export const REWARD_ICON_OPTIONS = [
   { id: 'rocket', label: 'Rocket', emoji: '🚀' },
 ] as const
 
+// Default rewards seeded for new families — parents can edit or delete these
+export const DEFAULT_REWARDS: readonly {
+  title: string
+  description: string
+  points_cost: number
+  icon_id: string
+  category: RewardCategory
+}[] = [
+  { title: '30 Min Screen Time', description: 'Enjoy 30 minutes of your favorite show or game', points_cost: 50, icon_id: 'game', category: 'screen_time' },
+  { title: 'Pick Dinner', description: 'You choose what the family eats tonight', points_cost: 100, icon_id: 'pizza', category: 'privileges' },
+  { title: 'Stay Up 30 Min Late', description: 'Push bedtime back by 30 minutes', points_cost: 75, icon_id: 'star', category: 'privileges' },
+  { title: 'Ice Cream Treat', description: 'A scoop of your favorite flavor', points_cost: 60, icon_id: 'ice_cream', category: 'treats' },
+  { title: 'Movie Night Pick', description: 'Pick the movie for family movie night', points_cost: 80, icon_id: 'movie', category: 'activities' },
+  { title: 'Park Trip', description: 'A trip to your favorite park', points_cost: 150, icon_id: 'park', category: 'activities' },
+  { title: 'New Book', description: 'Pick out a new book to read', points_cost: 200, icon_id: 'book', category: 'treats' },
+  { title: 'Sleepover with Friend', description: 'Have a friend over for the night', points_cost: 300, icon_id: 'sleepover', category: 'activities' },
+] as const
+
 // Avatar options
 export const AVATAR_OPTIONS = [
   { id: 'panther', name: 'Panther', url: '/avatars/panther.svg' },

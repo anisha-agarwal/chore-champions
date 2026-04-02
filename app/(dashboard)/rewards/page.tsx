@@ -12,6 +12,9 @@ import { ManageRewards } from '@/components/rewards/manage-rewards'
 import { ApprovalQueue } from '@/components/rewards/approval-queue'
 import { RewardForm } from '@/components/rewards/reward-form'
 import type { RewardFormData } from '@/components/rewards/reward-form'
+import {
+  DEFAULT_REWARDS,
+} from '@/lib/types'
 import type {
   Profile,
   Reward,
@@ -149,6 +152,23 @@ function RewardsPageContent() {
         setMyRedemptions(redemptions)
         setHasMoreRedemptions(count > PAGE_SIZE)
         setRedemptionOffset(PAGE_SIZE)
+
+        // Seed default rewards for new families (parent only, one-time)
+        if (isParent) {
+          const { count: rewardCount } = await supabase
+            .from('rewards')
+            .select('*', { count: 'exact', head: true })
+            .eq('family_id', profile.family_id)
+          if (rewardCount === 0) {
+            const rows = DEFAULT_REWARDS.map((r) => ({
+              family_id: profile.family_id!,
+              created_by: user.id,
+              ...r,
+            }))
+            await supabase.from('rewards').insert(rows)
+            await fetchRewards(profile.family_id)
+          }
+        }
       }
 
       setLoading(false)
