@@ -156,6 +156,82 @@ export type Database = {
           responded_at?: string | null
         }
       }
+      rewards: {
+        Row: {
+          id: string
+          family_id: string
+          title: string
+          description: string | null
+          points_cost: number
+          icon_id: string
+          category: string
+          stock: number | null
+          active: boolean
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          family_id: string
+          title: string
+          description?: string | null
+          points_cost: number
+          icon_id?: string
+          category?: string
+          stock?: number | null
+          active?: boolean
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          family_id?: string
+          title?: string
+          description?: string | null
+          points_cost?: number
+          icon_id?: string
+          category?: string
+          stock?: number | null
+          active?: boolean
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      reward_redemptions: {
+        Row: {
+          id: string
+          reward_id: string
+          redeemed_by: string
+          points_cost: number
+          status: 'pending' | 'approved' | 'rejected'
+          redeemed_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          reward_id: string
+          redeemed_by: string
+          points_cost: number
+          status?: string
+          redeemed_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          reward_id?: string
+          redeemed_by?: string
+          points_cost?: number
+          status?: string
+          redeemed_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+      }
     }
     Functions: {
       find_user_by_email: {
@@ -198,6 +274,14 @@ export type Database = {
       get_family_analytics: {
         Args: { p_family_id: string; p_weeks?: number }
         Returns: FamilyAnalytics
+      }
+      redeem_reward: {
+        Args: { p_user_id: string; p_reward_id: string }
+        Returns: { success: boolean; error?: string; points_spent?: number }
+      }
+      resolve_redemption: {
+        Args: { p_user_id: string; p_redemption_id: string; p_action: string }
+        Returns: { success: boolean; error?: string }
       }
     }
   }
@@ -425,6 +509,62 @@ export type ErrorListResult = {
   page: number
   total_pages: number
 }
+
+// Reward types
+export type Reward = Database['public']['Tables']['rewards']['Row']
+export type RewardRedemption = Database['public']['Tables']['reward_redemptions']['Row']
+
+export type RewardRedemptionWithDetails = RewardRedemption & {
+  rewards: Pick<Reward, 'title' | 'icon_id'>
+  profiles?: Pick<Profile, 'display_name' | 'nickname' | 'avatar_url'>
+}
+
+export type RewardCategory = 'screen_time' | 'treats' | 'activities' | 'privileges' | 'other'
+
+export const REWARD_CATEGORIES: readonly { value: RewardCategory; label: string; emoji: string }[] = [
+  { value: 'activities', label: 'Activities', emoji: '🎯' },
+  { value: 'treats', label: 'Treats', emoji: '🍪' },
+  { value: 'screen_time', label: 'Screen Time', emoji: '📱' },
+  { value: 'privileges', label: 'Privileges', emoji: '⭐' },
+  { value: 'other', label: 'Other', emoji: '🎁' },
+] as const
+
+export const REWARD_ICON_OPTIONS = [
+  { id: 'star', label: 'Star', emoji: '⭐' },
+  { id: 'trophy', label: 'Trophy', emoji: '🏆' },
+  { id: 'game', label: 'Game', emoji: '🎮' },
+  { id: 'movie', label: 'Movie', emoji: '🎬' },
+  { id: 'ice_cream', label: 'Ice Cream', emoji: '🍦' },
+  { id: 'pizza', label: 'Pizza', emoji: '🍕' },
+  { id: 'cookie', label: 'Cookie', emoji: '🍪' },
+  { id: 'bike', label: 'Bike Ride', emoji: '🚲' },
+  { id: 'park', label: 'Park', emoji: '🏞️' },
+  { id: 'sleepover', label: 'Sleepover', emoji: '🛏️' },
+  { id: 'book', label: 'Book', emoji: '📚' },
+  { id: 'music', label: 'Music', emoji: '🎵' },
+  { id: 'art', label: 'Art', emoji: '🎨' },
+  { id: 'gift', label: 'Gift', emoji: '🎁' },
+  { id: 'crown', label: 'Crown', emoji: '👑' },
+  { id: 'rocket', label: 'Rocket', emoji: '🚀' },
+] as const
+
+// Default rewards seeded for new families — parents can edit or delete these
+export const DEFAULT_REWARDS: readonly {
+  title: string
+  description: string
+  points_cost: number
+  icon_id: string
+  category: RewardCategory
+}[] = [
+  { title: '30 Min Screen Time', description: 'Enjoy 30 minutes of your favorite show or game', points_cost: 50, icon_id: 'game', category: 'screen_time' },
+  { title: 'Pick Dinner', description: 'You choose what the family eats tonight', points_cost: 100, icon_id: 'pizza', category: 'privileges' },
+  { title: 'Stay Up 30 Min Late', description: 'Push bedtime back by 30 minutes', points_cost: 75, icon_id: 'star', category: 'privileges' },
+  { title: 'Ice Cream Treat', description: 'A scoop of your favorite flavor', points_cost: 60, icon_id: 'ice_cream', category: 'treats' },
+  { title: 'Movie Night Pick', description: 'Pick the movie for family movie night', points_cost: 80, icon_id: 'movie', category: 'activities' },
+  { title: 'Park Trip', description: 'A trip to your favorite park', points_cost: 150, icon_id: 'park', category: 'activities' },
+  { title: 'New Book', description: 'Pick out a new book to read', points_cost: 200, icon_id: 'book', category: 'treats' },
+  { title: 'Sleepover with Friend', description: 'Have a friend over for the night', points_cost: 300, icon_id: 'sleepover', category: 'activities' },
+] as const
 
 // Avatar options
 export const AVATAR_OPTIONS = [

@@ -26,6 +26,8 @@ async function globalTeardown() {
         DELETE FROM task_completions WHERE task_id IN (SELECT id FROM tasks WHERE family_id = '${family_id}');
         DELETE FROM tasks WHERE family_id = '${family_id}';
         DELETE FROM family_invites WHERE family_id = '${family_id}';
+        DELETE FROM reward_redemptions WHERE reward_id IN (SELECT id FROM rewards WHERE family_id = '${family_id}');
+        DELETE FROM rewards WHERE family_id = '${family_id}';
       `)
     }
 
