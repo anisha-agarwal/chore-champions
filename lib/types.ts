@@ -548,6 +548,39 @@ export const REWARD_ICON_OPTIONS = [
   { id: 'rocket', label: 'Rocket', emoji: '🚀' },
 ] as const
 
+// ============================================================
+// AI Chat types
+// ============================================================
+
+export type ChatMessage = {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string // ISO 8601
+}
+
+export type AiConversation = {
+  id: string
+  family_id: string
+  parent_id: string
+  messages: ChatMessage[]
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AiKidChat = {
+  id: string
+  child_id: string
+  family_id: string
+  messages: ChatMessage[]
+  created_at: string
+}
+
+export type QuickAction = {
+  label: string
+  prompt: string
+}
+
 // Default rewards seeded for new families — parents can edit or delete these
 export const DEFAULT_REWARDS: readonly {
   title: string

@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   // Ensure user has completed onboarding (has a family)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('family_id')
+    .select('family_id, role')
     .eq('id', user.id)
     .single()
 
@@ -36,7 +36,7 @@ export default async function DashboardLayout({
       </ObservabilityErrorBoundary>
       <ToasterProvider />
       <PageViewTracker />
-      <NavBar />
+      <NavBar role={profile.role} />
     </div>
   )
 }
