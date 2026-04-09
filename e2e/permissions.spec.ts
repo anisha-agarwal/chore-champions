@@ -51,13 +51,13 @@ test.describe('Child Permissions', () => {
     }
   })
 
-  test('child sees Quest Buddy FAB, not add task FAB', async ({ page }) => {
-    // Children should see the Quest Buddy link FAB, not the purple add task button
-    const questBuddyFab = page.locator('a[href="/quest-buddy"].fixed')
-    await expect(questBuddyFab).toBeVisible()
+  test('child sees chat FAB, not add task FAB', async ({ page }) => {
+    // Children should see the chat FAB (Quest Buddy), not the add task button
+    const chatFab = page.getByRole('button', { name: 'Open chat' })
+    await expect(chatFab).toBeVisible()
 
-    // The purple add task FAB should not be visible for children
-    const addTaskFab = page.locator('button.fixed.bg-purple-600')
+    // The add task FAB should not be visible for children
+    const addTaskFab = page.getByTestId('add-quest-fab')
     await expect(addTaskFab).not.toBeVisible()
   })
 

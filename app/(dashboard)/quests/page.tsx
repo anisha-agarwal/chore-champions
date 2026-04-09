@@ -443,6 +443,7 @@ export default function QuestsPage() {
       {currentUser.role === 'parent' && (
         <button
           onClick={() => setIsFormOpen(true)}
+          data-testid="add-quest-fab"
           className="chat-hideable fixed bottom-40 right-4 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
