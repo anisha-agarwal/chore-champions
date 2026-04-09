@@ -80,16 +80,11 @@ describe('NavBar', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument()
   })
 
-  it('includes Chat nav item when role is parent', () => {
+  it('does not include Chat nav item (chat is now a floating widget)', () => {
     render(<NavBar role="parent" />)
-    expect(screen.getByText('Chat')).toBeInTheDocument()
+    expect(screen.queryByText('Chat')).not.toBeInTheDocument()
     const links = screen.getAllByRole('link')
     const hrefs = links.map((link) => link.getAttribute('href'))
-    expect(hrefs).toContain('/chat')
-  })
-
-  it('does not include Chat nav item for non-parent role', () => {
-    render(<NavBar />)
-    expect(screen.queryByText('Chat')).not.toBeInTheDocument()
+    expect(hrefs).not.toContain('/chat')
   })
 })

@@ -439,24 +439,11 @@ export default function QuestsPage() {
         selectedDate={selectedDate}
       />
 
-      {/* Quest Buddy FAB — kids only */}
-      {currentUser.role === 'child' && (
-        <a
-          href="/quest-buddy"
-          className="fixed bottom-40 right-4 w-14 h-14 bg-gradient-to-br from-yellow-400 to-pink-500 text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 transition"
-          aria-label="Open Quest Buddy"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </a>
-      )}
-
       {/* Add quest FAB — parents only */}
       {currentUser.role === 'parent' && (
         <button
           onClick={() => setIsFormOpen(true)}
-          className="fixed bottom-24 right-4 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition"
+          className="chat-hideable fixed bottom-40 right-4 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

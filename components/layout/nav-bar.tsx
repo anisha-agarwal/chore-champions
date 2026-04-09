@@ -43,16 +43,6 @@ const BASE_NAV_ITEMS = [
   },
 ]
 
-const CHAT_NAV_ITEM = {
-  label: 'Chat',
-  href: '/chat',
-  icon: (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-    </svg>
-  ),
-}
-
 interface NavBarProps {
   role?: 'parent' | 'child'
 }
@@ -60,8 +50,7 @@ interface NavBarProps {
 export function NavBar({ role }: NavBarProps) {
   const pathname = usePathname()
 
-  // Parents get a Chat nav item; kids use the Quest Buddy FAB on the quests page instead
-  const navItems = role === 'parent' ? [...BASE_NAV_ITEMS, CHAT_NAV_ITEM] : BASE_NAV_ITEMS
+  const navItems = BASE_NAV_ITEMS
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom">

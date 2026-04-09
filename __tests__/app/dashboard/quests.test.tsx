@@ -246,6 +246,17 @@ describe('QuestsPage', () => {
     expect(fab).toBeInTheDocument()
   })
 
+  it('add quest FAB has chat-hideable class so it hides when chat opens', async () => {
+    render(<QuestsPage />)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
+    })
+
+    const fab = document.querySelector('button.chat-hideable')
+    expect(fab).toBeInTheDocument()
+    expect(fab).toHaveClass('bottom-40')
+  })
+
   it('opens task form when FAB is clicked', async () => {
     const user = userEvent.setup()
     render(<QuestsPage />)

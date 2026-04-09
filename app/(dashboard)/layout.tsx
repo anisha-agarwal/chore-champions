@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { NavBar } from '@/components/layout/nav-bar'
+import { ChatFab } from '@/components/chat/chat-fab'
 import { ToasterProvider } from '@/components/ui/toaster-provider'
 import { ObservabilityErrorBoundary } from '@/components/error-boundary'
 import { PageViewTracker } from '@/components/page-view-tracker'
@@ -37,6 +38,7 @@ export default async function DashboardLayout({
       <ToasterProvider />
       <PageViewTracker />
       <NavBar role={profile.role} />
+      <ChatFab role={profile.role} />
     </div>
   )
 }
