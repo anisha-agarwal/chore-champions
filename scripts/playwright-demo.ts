@@ -100,7 +100,7 @@ async function runDemo() {
 
       // 6. Open New Quest Modal
       console.log('6. New quest modal...')
-      await page.locator('button.fixed.bg-purple-600').click()
+      await page.getByTestId('add-quest-fab').click()
       await page.waitForSelector('text=New Quest')
       await screenshot(page, '05-new-quest-modal')
       await page.keyboard.press('Escape')
