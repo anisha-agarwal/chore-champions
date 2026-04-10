@@ -34,8 +34,7 @@ test.describe('Quests Page', () => {
   })
 
   test('displays FAB button to add quest', async ({ page }) => {
-    // FAB button with + icon
-    const fab = page.locator('button.fixed').filter({ hasText: '' })
+    const fab = page.getByTestId('add-quest-fab')
     await expect(fab).toBeVisible()
   })
 
@@ -129,7 +128,7 @@ test.describe('Quests Page', () => {
 
   test('can open task form via FAB', async ({ page }) => {
     // Click FAB button
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
 
     // Task form modal should open - look for the heading specifically
@@ -395,7 +394,7 @@ test.describe('Quests Page', () => {
     createdTaskNames.push(taskName)
 
     // Get a family member name to assign to (from the Assign To dropdown)
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 
@@ -450,7 +449,7 @@ test.describe('Quests Page', () => {
     createdTaskNames.push(taskName)
 
     // Click FAB button to open form
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 
@@ -507,7 +506,7 @@ test.describe('Quests Page', () => {
     createdTaskNames.push(taskName)
 
     // Click FAB to open form
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 
@@ -533,7 +532,7 @@ test.describe('Quests Page', () => {
     createdTaskNames.push(taskName)
 
     // Open the form to check available members
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 

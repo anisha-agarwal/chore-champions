@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { createTestTask, getTaskCard, cleanupTestTask } from './helpers'
+import { getTaskCard, cleanupTestTask } from './helpers'
+import { runSQL } from './supabase-admin'
+import { TEST_CHILD_EMAIL, TEST_FAMILY_NAME } from './test-constants'
 
 /**
  * Permission tests - verify role-based access control
@@ -8,6 +10,28 @@ import { createTestTask, getTaskCard, cleanupTestTask } from './helpers'
 
 // Track task names for cleanup
 let createdTaskNames: string[] = []
+
+/**
+ * Creates a task directly via SQL for a given child user (bypasses UI).
+ * Children no longer have a FAB to create tasks — only parents do.
+ */
+async function createTaskForChild(taskName: string): Promise<void> {
+  await runSQL(`
+    INSERT INTO tasks (title, points, due_date, family_id, created_by)
+    SELECT
+      '${taskName}',
+      5,
+      CURRENT_DATE,
+      p.family_id,
+      p.id
+    FROM profiles p
+    JOIN auth.users u ON u.id = p.id
+    JOIN families f ON f.id = p.family_id
+    WHERE u.email = '${TEST_CHILD_EMAIL}'
+      AND f.name = '${TEST_FAMILY_NAME}'
+    LIMIT 1;
+  `)
+}
 
 test.describe('Child Permissions', () => {
   // Use child authentication
@@ -27,23 +51,26 @@ test.describe('Child Permissions', () => {
     }
   })
 
-  test('child can create a task', async ({ page }) => {
-    const taskName = `Child Task ${Date.now()}`
-    createdTaskNames.push(taskName)
+  test('child sees chat FAB, not add task FAB', async ({ page }) => {
+    // Children should see the chat FAB (Quest Buddy), not the add task button
+    const chatFab = page.getByRole('button', { name: 'Open chat' })
+    await expect(chatFab).toBeVisible()
 
-    await createTestTask(page, taskName)
-
-    // Task should be visible
-    await expect(page.getByText(taskName)).toBeVisible()
+    // The add task FAB should not be visible for children
+    const addTaskFab = page.getByTestId('add-quest-fab')
+    await expect(addTaskFab).not.toBeVisible()
   })
 
   test('child can delete their own task', async ({ page }) => {
     const taskName = `Child Delete Own ${Date.now()}`
 
-    // Create a task as child
-    await createTestTask(page, taskName)
+    // Create a task as child via SQL (children no longer have add task FAB)
+    await createTaskForChild(taskName)
+    await page.reload()
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
 
     // Find the task and verify delete button is visible
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
     const taskCard = getTaskCard(page, taskName)
     await expect(taskCard.getByTitle('Delete quest')).toBeVisible()
 
@@ -61,10 +88,13 @@ test.describe('Child Permissions', () => {
     const newTaskName = `Child Edited ${Date.now()}`
     createdTaskNames.push(newTaskName)
 
-    // Create a task as child
-    await createTestTask(page, taskName)
+    // Create a task as child via SQL (children no longer have add task FAB)
+    await createTaskForChild(taskName)
+    await page.reload()
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
 
     // Find the task and verify edit button is visible
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
     const taskCard = getTaskCard(page, taskName)
     await expect(taskCard.getByTitle('Edit quest')).toBeVisible()
 
@@ -85,10 +115,13 @@ test.describe('Child Permissions', () => {
     const taskName = `Child Complete ${Date.now()}`
     createdTaskNames.push(taskName)
 
-    // Create a task
-    await createTestTask(page, taskName)
+    // Create a task as child via SQL (children no longer have add task FAB)
+    await createTaskForChild(taskName)
+    await page.reload()
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
 
-    // Complete it
+    // Find and complete the task
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
     const taskCard = getTaskCard(page, taskName)
     await taskCard.locator('button.border-gray-300').click()
 

@@ -38,7 +38,7 @@ test.describe('Natural Language Quest Creation', () => {
     createdTaskNames.push(taskName)
 
     // Open the New Quest modal
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 
@@ -72,7 +72,7 @@ test.describe('Natural Language Quest Creation', () => {
     })
 
     // Open the New Quest modal
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 
@@ -126,7 +126,7 @@ test.describe('Natural Language Quest Creation', () => {
     })
 
     // Open the New Quest modal
-    const fab = page.locator('button.fixed.bg-purple-600')
+    const fab = page.getByTestId('add-quest-fab')
     await fab.click()
     await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
 

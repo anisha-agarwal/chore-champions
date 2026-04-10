@@ -8,6 +8,9 @@ export const APP_EVENT_TYPES = [
   'ai_insight_generated',
   'ai_encouragement_generated',
   'ai_quest_parsed',
+  'ai_parent_chat_message',
+  'ai_kid_chat_message',
+  'ai_chat_conversation_created',
   'api_request',
   'rpc_call',
   'page_view',
@@ -46,6 +49,9 @@ export const ALLOWED_METADATA_KEYS = new Set([
   'error',
   'errorCode',
   'componentStack',
+  'conversationId',
+  'streamDurationMs',
+  'responseLength',
 ])
 
 export const METADATA_MAX_BYTES = 10 * 1024 // 10KB per metadata object

@@ -19,7 +19,7 @@ export async function createTestTask(
     : optionsOrRecurring || {}
 
   // Click FAB button to open form
-  const fab = page.locator('button.fixed.bg-purple-600')
+  const fab = page.getByTestId('add-quest-fab')
   await fab.click()
 
   // Wait for modal to open

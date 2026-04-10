@@ -439,15 +439,18 @@ export default function QuestsPage() {
         selectedDate={selectedDate}
       />
 
-      {/* FAB */}
-      <button
-        onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition"
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
+      {/* Add quest FAB — parents only */}
+      {currentUser.role === 'parent' && (
+        <button
+          onClick={() => setIsFormOpen(true)}
+          data-testid="add-quest-fab"
+          className="chat-hideable fixed bottom-40 right-4 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      )}
 
       <TaskForm
         isOpen={isFormOpen || !!editingTask}

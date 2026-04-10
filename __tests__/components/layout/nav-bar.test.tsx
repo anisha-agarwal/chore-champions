@@ -79,4 +79,12 @@ describe('NavBar', () => {
     render(<NavBar />)
     expect(screen.getByRole('navigation')).toBeInTheDocument()
   })
+
+  it('does not include Chat nav item (chat is now a floating widget)', () => {
+    render(<NavBar role="parent" />)
+    expect(screen.queryByText('Chat')).not.toBeInTheDocument()
+    const links = screen.getAllByRole('link')
+    const hrefs = links.map((link) => link.getAttribute('href'))
+    expect(hrefs).not.toContain('/chat')
+  })
 })
