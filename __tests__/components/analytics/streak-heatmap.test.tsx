@@ -3,7 +3,17 @@ import { StreakHeatmap } from '@/components/analytics/streak-heatmap'
 import type { DailyPoint } from '@/lib/types'
 
 describe('StreakHeatmap', () => {
-  const today = new Date()
+  // Pin the clock to a Wednesday so the heatmap grid always has future-dated
+  // cells past `today`, exercising the `d > today → push(null)` branch
+  // regardless of which day of the week the tests run on.
+  beforeAll(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2025-06-18T12:00:00Z'))
+  })
+  afterAll(() => {
+    jest.useRealTimers()
+  })
+
+  const today = new Date('2025-06-18T12:00:00Z')
   const toIso = (daysAgo: number) => {
     const d = new Date(today)
     d.setDate(d.getDate() - daysAgo)

@@ -493,7 +493,10 @@ describe('getCurrentWeekStart', () => {
     const today = new Date()
     const cutoff = new Date(today)
     cutoff.setDate(today.getDate() - 6)
-    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    // getCurrentWeekStart returns a LOCAL-timezone date string; build the
+    // cutoff from local date parts too, otherwise evenings in UTC- zones
+    // roll cutoff forward by a day and the comparison spuriously fails.
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`
     expect(result >= cutoffStr).toBe(true)
   })
 })
