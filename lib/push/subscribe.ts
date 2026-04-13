@@ -23,8 +23,8 @@ export async function subscribeToPush(): Promise<PushSubscription> {
 
   const applicationServerKey = urlBase64ToUint8Array(getVapidPublicKey())
   const subscription = await registration.pushManager.subscribe({
-    userVisuallyIndicatesPermission: true,
-    applicationServerKey,
+    userVisibleOnly: true,
+    applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
   })
 
   await postSubscription(subscription)

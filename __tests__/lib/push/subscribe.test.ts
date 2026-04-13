@@ -72,8 +72,8 @@ describe('subscribeToPush', () => {
     expect(navigator.serviceWorker.register).toHaveBeenCalledWith('/sw.js')
     expect(mockRequestPermission).toHaveBeenCalled()
     expect(mockSubscribe).toHaveBeenCalledWith({
-      userVisuallyIndicatesPermission: true,
-      applicationServerKey: expect.any(Uint8Array),
+      userVisibleOnly: true,
+      applicationServerKey: expect.any(ArrayBuffer),
     })
     expect(mockFetch).toHaveBeenCalledWith('/api/push/subscribe', expect.objectContaining({
       method: 'POST',
