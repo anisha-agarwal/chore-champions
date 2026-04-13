@@ -15,6 +15,10 @@ export const APP_EVENT_TYPES = [
   'rpc_call',
   'page_view',
   'health_probe',
+  'push_subscription_created',
+  'push_subscription_deleted',
+  'push_notification_sent',
+  'push_notification_failed',
 ] as const
 
 export type AppEventType = typeof APP_EVENT_TYPES[number]
@@ -52,6 +56,9 @@ export const ALLOWED_METADATA_KEYS = new Set([
   'conversationId',
   'streamDurationMs',
   'responseLength',
+  'notificationType',
+  'subscriberCount',
+  'failureReason',
 ])
 
 export const METADATA_MAX_BYTES = 10 * 1024 // 10KB per metadata object
