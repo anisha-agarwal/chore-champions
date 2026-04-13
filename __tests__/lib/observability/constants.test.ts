@@ -20,6 +20,13 @@ describe('observability constants', () => {
     expect(APP_EVENT_TYPES).toContain('health_probe')
   })
 
+  it('APP_EVENT_TYPES contains push notification events', () => {
+    expect(APP_EVENT_TYPES).toContain('push_subscription_created')
+    expect(APP_EVENT_TYPES).toContain('push_subscription_deleted')
+    expect(APP_EVENT_TYPES).toContain('push_notification_sent')
+    expect(APP_EVENT_TYPES).toContain('push_notification_failed')
+  })
+
   it('APP_ERROR_TYPES contains expected values', () => {
     expect(APP_ERROR_TYPES).toContain('rpc')
     expect(APP_ERROR_TYPES).toContain('api')
@@ -43,6 +50,12 @@ describe('observability constants', () => {
     expect(ALLOWED_METADATA_KEYS.has('route')).toBe(true)
     expect(ALLOWED_METADATA_KEYS.has('rpcName')).toBe(true)
     expect(ALLOWED_METADATA_KEYS.has('taskName')).toBe(true)
+  })
+
+  it('ALLOWED_METADATA_KEYS includes push notification metadata', () => {
+    expect(ALLOWED_METADATA_KEYS.has('notificationType')).toBe(true)
+    expect(ALLOWED_METADATA_KEYS.has('subscriberCount')).toBe(true)
+    expect(ALLOWED_METADATA_KEYS.has('failureReason')).toBe(true)
   })
 
   it('METADATA_MAX_BYTES is defined', () => {
