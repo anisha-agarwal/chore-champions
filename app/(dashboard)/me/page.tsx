@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +11,7 @@ import { RoleSelector, type Role } from '@/components/ui/role-selector'
 import { UnderlineInput } from '@/components/ui/underline-input'
 import { Button } from '@/components/ui/button'
 import { StreakTab } from '@/components/streaks/streak-tab'
+import { NotificationSettingsTab } from '@/components/notifications/notification-settings-tab'
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton'
 import { AVATAR_OPTIONS, type Profile } from '@/lib/types'
 
@@ -19,7 +20,7 @@ const KidStatsTab = dynamic(
   { loading: () => <AnalyticsSkeleton />, ssr: false }
 )
 
-type MeTab = 'profile' | 'streaks' | 'stats'
+type MeTab = 'profile' | 'streaks' | 'stats' | 'notifications'
 
 export default function MePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -32,7 +33,10 @@ export default function MePage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<MeTab>('profile')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<MeTab>(
+    (searchParams.get('tab') as MeTab) || 'profile'
+  )
   const [isPasswordOpen, setIsPasswordOpen] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -198,7 +202,7 @@ export default function MePage() {
       {/* Tab Switcher */}
       <div className="px-6 pb-2">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 max-w-md mx-auto">
-          {(['profile', 'streaks', 'stats'] as const).map((tab) => (
+          {(['profile', 'streaks', 'stats', 'notifications'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -208,7 +212,7 @@ export default function MePage() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'profile' ? 'Profile' : tab === 'streaks' ? 'Streaks' : 'Stats'}
+              {tab === 'profile' ? 'Profile' : tab === 'streaks' ? 'Streaks' : tab === 'stats' ? 'Stats' : 'Alerts'}
             </button>
           ))}
         </div>
@@ -216,7 +220,9 @@ export default function MePage() {
 
       <main className="flex-1 px-6 pt-4 pb-24">
         <div className="max-w-md mx-auto">
-          {activeTab === 'streaks' ? (
+          {activeTab === 'notifications' ? (
+            <NotificationSettingsTab userRole={role} />
+          ) : activeTab === 'streaks' ? (
             <StreakTab userId={profile.id} userPoints={profile.points} />
           ) : activeTab === 'stats' ? (
             <KidStatsTab userId={profile.id} />
