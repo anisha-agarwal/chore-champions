@@ -29,6 +29,7 @@ export function NotificationSettingsTab({ userRole }: NotificationSettingsTabPro
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscribing, setSubscribing] = useState(false)
+  const [testSending, setTestSending] = useState(false)
   const [permissionState, setPermissionState] = useState<NotificationPermission | 'unsupported'>('default')
   const [subscriptionState, setSubscriptionState] = useState<'subscribed' | 'unsubscribed' | 'unsupported'>('unsubscribed')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -109,6 +110,23 @@ export function NotificationSettingsTab({ userRole }: NotificationSettingsTabPro
     const next: TypesEnabled = { ...prefs!.types_enabled, [type]: !prefs!.types_enabled[type] }
     setPrefs({ ...prefs!, types_enabled: next })
     patchPrefs({ types_enabled: { [type]: next[type] } })
+  }
+
+  const handleSendTest = async () => {
+    setTestSending(true)
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        toast.success(`Test notification sent to ${data.sent} device(s)`)
+      } else {
+        toast.error('Failed to send test notification')
+      }
+    } catch {
+      toast.error('Failed to send test notification')
+    } finally {
+      setTestSending(false)
+    }
   }
 
   const handleQuietHoursChange = (field: 'quiet_hours_start' | 'quiet_hours_end', value: string) => {
@@ -234,6 +252,17 @@ export function NotificationSettingsTab({ userRole }: NotificationSettingsTabPro
             ))}
           </select>
         </div>
+      </section>
+
+      {/* Send test notification */}
+      <section>
+        <button
+          onClick={handleSendTest}
+          disabled={!prefs.push_enabled || subscriptionState !== 'subscribed' || testSending}
+          className="w-full text-sm text-purple-600 border border-purple-200 rounded-lg px-4 py-2.5 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {testSending ? 'Sending...' : 'Send test notification'}
+        </button>
       </section>
     </div>
   )
