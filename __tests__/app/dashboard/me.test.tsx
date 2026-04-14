@@ -9,6 +9,7 @@ jest.mock('next/navigation', () => ({
     push: mockPush,
     refresh: jest.fn(),
   }),
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 // Mock next/image
@@ -28,6 +29,13 @@ jest.mock('@/components/streaks/streak-tab', () => ({
 jest.mock('@/components/analytics/kid-stats-tab', () => ({
   KidStatsTab: ({ userId }: { userId: string }) => (
     <div data-testid="kid-stats-tab">Stats for {userId}</div>
+  ),
+}))
+
+// Mock NotificationSettingsTab
+jest.mock('@/components/notifications/notification-settings-tab', () => ({
+  NotificationSettingsTab: ({ userRole }: { userRole: string }) => (
+    <div data-testid="notification-settings-tab">Notifications for {userRole}</div>
   ),
 }))
 
@@ -840,6 +848,22 @@ describe('Me Page', () => {
         expect(screen.getByTestId('kid-stats-tab')).toBeInTheDocument()
       })
       expect(screen.getByText('Stats for user-123')).toBeInTheDocument()
+      expect(screen.queryByText('Personal Info')).not.toBeInTheDocument()
+    })
+
+    it('switches to notifications tab and shows NotificationSettingsTab', async () => {
+      const user = userEvent.setup()
+      render(<MePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Profile')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Alerts' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('notification-settings-tab')).toBeInTheDocument()
+      })
       expect(screen.queryByText('Personal Info')).not.toBeInTheDocument()
     })
   })
