@@ -337,6 +337,94 @@ describe('NotificationSettingsTab', () => {
     })
   })
 
+  describe('send test button', () => {
+    it('is disabled when not subscribed', async () => {
+      mockGetState.mockResolvedValue('unsubscribed')
+      render(<NotificationSettingsTab userRole="parent" />)
+      await waitFor(() => expect(screen.getByTestId('notification-settings')).toBeInTheDocument())
+
+      expect(screen.getByRole('button', { name: /send test notification/i })).toBeDisabled()
+    })
+
+    it('is disabled when master toggle is off', async () => {
+      mockGetState.mockResolvedValue('subscribed')
+      setupNotification('granted')
+      setupFetch({ ...defaultPrefs, push_enabled: false })
+      render(<NotificationSettingsTab userRole="parent" />)
+      await waitFor(() => expect(screen.getByTestId('notification-settings')).toBeInTheDocument())
+
+      expect(screen.getByRole('button', { name: /send test notification/i })).toBeDisabled()
+    })
+
+    it('sends test notification and shows success toast', async () => {
+      const { toast } = jest.requireMock('sonner')
+      mockGetState.mockResolvedValue('subscribed')
+      setupNotification('granted')
+      global.fetch = jest.fn((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr.includes('/api/push/test')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ sent: 1 }) })
+        }
+        if (urlStr.includes('/api/push/preferences')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: defaultPrefs }) })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }) as unknown as typeof fetch
+
+      render(<NotificationSettingsTab userRole="parent" />)
+      await waitFor(() => expect(screen.getByTestId('notification-settings')).toBeInTheDocument())
+
+      const btn = screen.getByRole('button', { name: /send test notification/i })
+      await userEvent.click(btn)
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Test notification sent to 1 device(s)'))
+    })
+
+    it('shows error toast when test request fails', async () => {
+      const { toast } = jest.requireMock('sonner')
+      mockGetState.mockResolvedValue('subscribed')
+      setupNotification('granted')
+      global.fetch = jest.fn((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr.includes('/api/push/test')) {
+          return Promise.resolve({ ok: false })
+        }
+        if (urlStr.includes('/api/push/preferences')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: defaultPrefs }) })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }) as unknown as typeof fetch
+
+      render(<NotificationSettingsTab userRole="parent" />)
+      await waitFor(() => expect(screen.getByTestId('notification-settings')).toBeInTheDocument())
+
+      await userEvent.click(screen.getByRole('button', { name: /send test notification/i }))
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to send test notification'))
+    })
+
+    it('shows error toast when test request throws', async () => {
+      const { toast } = jest.requireMock('sonner')
+      mockGetState.mockResolvedValue('subscribed')
+      setupNotification('granted')
+      global.fetch = jest.fn((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr.includes('/api/push/test')) {
+          return Promise.reject(new Error('Network error'))
+        }
+        if (urlStr.includes('/api/push/preferences')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: defaultPrefs }) })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }) as unknown as typeof fetch
+
+      render(<NotificationSettingsTab userRole="parent" />)
+      await waitFor(() => expect(screen.getByTestId('notification-settings')).toBeInTheDocument())
+
+      await userEvent.click(screen.getByRole('button', { name: /send test notification/i }))
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to send test notification'))
+    })
+  })
+
   describe('unsupported browser', () => {
     it('renders unsupported prompt when Notification API is missing', async () => {
       Reflect.deleteProperty(window, 'Notification')
