@@ -168,6 +168,9 @@ jest.mock('@/lib/supabase/client', () => ({
   }),
 }))
 
+const mockFetch = jest.fn()
+const originalFetch = global.fetch
+
 describe('QuestsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -176,6 +179,15 @@ describe('QuestsPage', () => {
     mockInsert.mockResolvedValue({ error: null })
     mockUpdate.mockResolvedValue({ error: null })
     mockDelete.mockResolvedValue({ error: null })
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ pointsEarned: 10, taskTitle: 'Clean Room' }),
+    })
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
     mockProfileData.current = mockProfile
     mockMembersData.current = mockMembers
     mockOneTimeTasksData.current = mockTasks
@@ -916,9 +928,49 @@ describe('QuestsPage', () => {
       await user.click(checkbox)
 
       await waitFor(() => {
-        // Should call update (mark completed on task) and insert (completion record)
-        expect(mockUpdate).toHaveBeenCalled()
-        expect(mockInsert).toHaveBeenCalled()
+        expect(mockFetch).toHaveBeenCalledWith('/api/tasks/complete', expect.objectContaining({
+          method: 'POST',
+        }))
+      })
+    })
+
+    it('completes a recurring task and sends selectedDate in the payload', async () => {
+      mockOneTimeTasksData.current = []
+      mockRecurringTasksData.current = [
+        {
+          id: 'rec-1',
+          family_id: 'family-1',
+          title: 'Daily Recurring',
+          description: null,
+          assigned_to: 'child-1',
+          points: 5,
+          time_of_day: 'morning',
+          recurring: 'daily',
+          due_date: '2024-01-01',
+          due_time: null,
+          completed: false,
+          created_by: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          end_date: null,
+          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
+        },
+      ]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Daily Recurring')).toBeInTheDocument()
+      })
+
+      const taskCard = screen.getByText('Daily Recurring').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        const body = JSON.parse((mockFetch.mock.calls[0][1] as { body: string }).body)
+        expect(body.selectedDate).not.toBeNull()
+        expect(typeof body.selectedDate).toBe('string')
       })
     })
   })
@@ -1101,7 +1153,7 @@ describe('QuestsPage', () => {
   })
 
   describe('handleCompleteTask error paths', () => {
-    it('throws when update fails for non-recurring task (line 285)', async () => {
+    it('throws when API returns an error', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
       const user = userEvent.setup()
@@ -1111,21 +1163,22 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
       })
 
-      // Make update fail AFTER render/fetchData (fetchData only uses select, not update)
-      mockUpdate.mockResolvedValue({ error: { message: 'Complete failed' } })
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Failed to update task' }),
+      })
 
       const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
       const checkbox = taskCard.querySelector('button')!
       await user.click(checkbox)
 
-      // The error propagates through TaskCard's handleComplete catch
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Complete failed' }))
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Failed to update task' }))
       })
       consoleSpy.mockRestore()
     })
 
-    it('throws when completion insert fails (line 303)', async () => {
+    it('throws with fallback message when API error has no error field', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
       const user = userEvent.setup()
@@ -1135,15 +1188,17 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
       })
 
-      // Make insert fail AFTER render (so fetchData's selects work fine)
-      mockInsert.mockResolvedValue({ error: { message: 'Completion failed' } })
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({}),
+      })
 
       const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
       const checkbox = taskCard.querySelector('button')!
       await user.click(checkbox)
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Completion failed' }))
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Failed to complete task' }))
       })
       consoleSpy.mockRestore()
     })
@@ -1196,101 +1251,6 @@ describe('QuestsPage', () => {
     })
   })
 
-  describe('isTaskOverdue edge cases', () => {
-    it('completes task with no due_date (line 349 - dateStr null)', async () => {
-      mockOneTimeTasksData.current = [
-        {
-          ...mockTasks[0],
-          due_date: null,
-          due_time: '14:30:00',
-        },
-      ]
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
-      const user = userEvent.setup()
-      render(<QuestsPage />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Clean Room')).toBeInTheDocument()
-      })
-
-      // Complete the task - this calls isTaskOverdue which should return false for null dateStr
-      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
-      const checkbox = taskCard.querySelector('button')!
-      await user.click(checkbox)
-
-      await waitFor(() => {
-        expect(mockUpdate).toHaveBeenCalled()
-      })
-      consoleSpy.mockRestore()
-    })
-  })
-
-  describe('isTaskOverdue', () => {
-    it('completes a recurring task with due_time (exercises recurring branch)', async () => {
-      mockOneTimeTasksData.current = []
-      mockRecurringTasksData.current = [
-        {
-          id: 'rec-overdue',
-          family_id: 'family-1',
-          title: 'Overdue Recurring',
-          description: null,
-          assigned_to: 'child-1',
-          points: 10,
-          time_of_day: 'morning',
-          recurring: 'daily',
-          due_date: '2024-01-01',
-          due_time: '00:01:00',
-          completed: false,
-          created_by: 'user-1',
-          created_at: '2024-01-01T00:00:00Z',
-          end_date: null,
-          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
-        },
-      ]
-
-      const user = userEvent.setup()
-      render(<QuestsPage />)
-      await waitFor(() => {
-        expect(screen.getByText('Overdue Recurring')).toBeInTheDocument()
-      })
-
-      // Click the checkbox to complete (this calls handleCompleteTask which calls isTaskOverdue)
-      const taskCard = screen.getByText('Overdue Recurring').closest('div[class*="bg-white rounded-xl"]')!
-      const checkbox = taskCard.querySelector('button')!
-      await user.click(checkbox)
-
-      await waitFor(() => {
-        expect(mockInsert).toHaveBeenCalled()
-      })
-    })
-
-    it('completes a non-recurring task with due_time (exercises non-recurring branch)', async () => {
-      mockOneTimeTasksData.current = [
-        {
-          ...mockTasks[0],
-          due_time: '00:01:00',
-        },
-      ]
-
-      const user = userEvent.setup()
-      render(<QuestsPage />)
-      await waitFor(() => {
-        expect(screen.getByText('Clean Room')).toBeInTheDocument()
-      })
-
-      // Click the checkbox to complete
-      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
-      const checkbox = taskCard.querySelector('button')!
-      await user.click(checkbox)
-
-      await waitFor(() => {
-        expect(mockUpdate).toHaveBeenCalled()
-        expect(mockInsert).toHaveBeenCalled()
-      })
-    })
-  })
-
   describe('weekly recurring task with null due_date', () => {
     it('filters out weekly task with null due_date (returns false)', async () => {
       mockRecurringTasksData.current = [
@@ -1318,47 +1278,6 @@ describe('QuestsPage', () => {
         expect(screen.getByRole('heading', { name: 'Quests' })).toBeInTheDocument()
       })
       expect(screen.queryByText('Weekly No Date')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('handleCompleteTask with overdue non-recurring', () => {
-    it('completes an overdue non-recurring task (half points, line 289)', async () => {
-      // We need a task with due_time set in the past so isTaskOverdue returns true
-      // and it's non-recurring so we hit both the non-recurring update AND half-points path
-      mockOneTimeTasksData.current = [
-        {
-          id: 'task-overdue',
-          family_id: 'family-1',
-          title: 'Overdue Non-Recurring',
-          description: null,
-          assigned_to: 'child-1',
-          points: 10,
-          time_of_day: 'morning',
-          recurring: null,
-          due_date: new Date().toISOString().slice(0, 10),
-          due_time: '00:01:00', // Past time
-          completed: false,
-          created_by: 'user-1',
-          created_at: '2024-01-01T00:00:00Z',
-          end_date: null,
-          profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
-        },
-      ]
-
-      const user = userEvent.setup()
-      render(<QuestsPage />)
-      await waitFor(() => {
-        expect(screen.getByText('Overdue Non-Recurring')).toBeInTheDocument()
-      })
-
-      const taskCard = screen.getByText('Overdue Non-Recurring').closest('div[class*="bg-white rounded-xl"]')!
-      const checkbox = taskCard.querySelector('button')!
-      await user.click(checkbox)
-
-      await waitFor(() => {
-        expect(mockUpdate).toHaveBeenCalled()
-        expect(mockInsert).toHaveBeenCalled()
-      })
     })
   })
 
@@ -1599,7 +1518,7 @@ describe('QuestsPage', () => {
       })
     })
 
-    it('handles complete when user is null (line 273 guard)', async () => {
+    it('handles complete when API returns 401', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
       const user = userEvent.setup()
       render(<QuestsPage />)
@@ -1608,8 +1527,10 @@ describe('QuestsPage', () => {
         expect(screen.getByText('Clean Room')).toBeInTheDocument()
       })
 
-      // Make getUser return null AFTER render
-      mockGetUser.mockResolvedValue({ data: { user: null } })
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      })
 
       const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
       const checkbox = taskCard.querySelector('button')!

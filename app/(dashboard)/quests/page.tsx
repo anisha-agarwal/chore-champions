@@ -9,7 +9,7 @@ import { TaskForm } from '@/components/tasks/task-form'
 import { MemberFilter } from '@/components/family/member-filter'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { toDateString, combineDateAndTime } from '@/lib/utils'
+import { toDateString } from '@/lib/utils'
 import { useEncouragement } from '@/lib/hooks/use-encouragement'
 import type { Profile, TaskWithAssignee } from '@/lib/types'
 
@@ -275,42 +275,26 @@ export default function QuestsPage() {
   }
 
   async function handleCompleteTask(taskId: string) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
     const task = tasks.find((t) => t.id === taskId)
     /* istanbul ignore next -- task always exists; checkbox is rendered from the tasks array */
     if (!task) throw new Error('Task not found')
 
-    // For non-recurring tasks, mark as completed on the task row
-    if (!task.recurring) {
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({ completed: true })
-        .eq('id', taskId)
+    const res = await fetch('/api/tasks/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId,
+        selectedDate: task.recurring ? toDateString(selectedDate) : null,
+      }),
+    })
 
-      if (updateError) throw updateError
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || 'Failed to complete task')
     }
 
-    // Calculate points: half points if the task is overdue
-    const pointsEarned = isTaskOverdue(task) ? Math.floor(task.points / 2) : task.points
-
-    // Create completion record
-    // For recurring tasks, store the completion_date so we can query by date.
-    // completed_at keeps its database default (now()) for audit purposes.
-    const { error: completionError } = await supabase
-      .from('task_completions')
-      .insert({
-        task_id: taskId,
-        completed_by: user.id,
-        points_earned: pointsEarned,
-        completion_date: task.recurring ? toDateString(selectedDate) : null,
-      })
-
-    if (completionError) throw completionError
-
+    const { pointsEarned } = await res.json()
     showEncouragement({ task, pointsEarned, currentUser: currentUser!, tasks })
-
     fetchData()
   }
 
@@ -349,16 +333,6 @@ export default function QuestsPage() {
 
     // Database trigger handles point deduction
     fetchData()
-  }
-
-  // Check if a task with a due_time is past its deadline
-  function isTaskOverdue(task: TaskWithAssignee): boolean {
-    if (!task.due_time) return false
-    // For recurring tasks, use selectedDate; for one-time tasks, use due_date
-    const dateStr = task.recurring ? toDateString(selectedDate) : task.due_date
-    if (!dateStr) return false
-    const deadline = combineDateAndTime(dateStr, task.due_time)
-    return new Date() > deadline
   }
 
   // Filter tasks
