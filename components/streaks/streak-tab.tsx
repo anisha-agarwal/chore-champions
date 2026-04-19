@@ -64,6 +64,11 @@ export function StreakTab({ userId, userPoints }: StreakTabProps) {
       toast.success(`${result.badge} unlocked! +${result.bonus} points`)
       setPoints((prev) => prev + (result.bonus ?? 0))
       fetchData()
+      void fetch('/api/push/trigger/streak-milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days, badge: result.badge }),
+      })
     } else if (result?.error) {
       toast.error(result.error)
     }

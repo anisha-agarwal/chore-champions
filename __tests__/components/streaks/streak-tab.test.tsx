@@ -10,6 +10,9 @@ jest.mock('sonner', () => ({
   },
 }))
 
+const mockFetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }))
+const originalFetch = global.fetch
+
 // Mock Supabase
 const mockRpc = jest.fn()
 const mockFrom = jest.fn()
@@ -75,6 +78,12 @@ describe('StreakTab', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     setupMocks()
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
   })
 
   it('shows loading skeleton initially', () => {
@@ -220,6 +229,14 @@ describe('StreakTab', () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Week Warrior unlocked! +50 points')
+    })
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith('/api/push/trigger/streak-milestone', expect.objectContaining({
+        method: 'POST',
+      }))
+      const body = JSON.parse((mockFetch.mock.calls[0][1] as { body: string }).body)
+      expect(body).toEqual({ days: 7, badge: 'Week Warrior' })
     })
   })
 
