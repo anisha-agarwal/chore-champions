@@ -111,6 +111,25 @@ async function runSmokeTest() {
   results.push(await checkPage(page, 'Login', `${BASE_URL}/login`, /sign in/i))
   results.push(await checkPage(page, 'Signup', `${BASE_URL}/signup`, /create.*account/i))
 
+  // Unauthenticated POST to assign-self should return 401
+  console.log('\nChecking assign-self endpoint (unauth)...')
+  const assignSelfCtx = await browser.newContext()
+  const assignSelfRes = await assignSelfCtx.request.post(`${BASE_URL}/api/tasks/assign-self`, {
+    data: { taskId: 'smoke-check' },
+  })
+  if (assignSelfRes.status() === 401) {
+    results.push({ page: 'assign-self endpoint (401)', url: `${BASE_URL}/api/tasks/assign-self`, status: 'pass', loadTime: 0 })
+  } else {
+    results.push({
+      page: 'assign-self endpoint (401)',
+      url: `${BASE_URL}/api/tasks/assign-self`,
+      status: 'fail',
+      error: `expected 401, got ${assignSelfRes.status()}`,
+      loadTime: 0,
+    })
+  }
+  await assignSelfCtx.close()
+
   // Check if we have test credentials
   const email = process.env.TEST_PARENT_EMAIL
   const password = process.env.TEST_PARENT_PASSWORD

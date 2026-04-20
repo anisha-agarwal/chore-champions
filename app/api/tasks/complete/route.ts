@@ -13,6 +13,8 @@ interface TaskRow {
   due_date: string | null
   family_id: string
   completed: boolean
+  assigned_to: string | null
+  self_assigned: boolean
 }
 
 async function handler(req: NextRequest): Promise<NextResponse> {
@@ -45,7 +47,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
   const { data: task } = await supabase
     .from('tasks')
-    .select('id, title, points, recurring, due_time, due_date, family_id, completed')
+    .select('id, title, points, recurring, due_time, due_date, family_id, completed, assigned_to, self_assigned')
     .eq('id', body.taskId)
     .single()
 
@@ -87,6 +89,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Initiative bonus: +50% for self-assigned tasks completed by the assignee
+  const bonusApplied = typedTask.self_assigned && typedTask.assigned_to === user.id
+  if (bonusApplied) {
+    pointsEarned = Math.ceil(pointsEarned * 1.5)
+  }
+
   const completionDate = typedTask.recurring && body.selectedDate ? body.selectedDate : null
 
   const { error: completionError } = await supabase
@@ -96,6 +104,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       completed_by: user.id,
       points_earned: pointsEarned,
       completion_date: completionDate,
+      bonus_applied: bonusApplied,
     })
 
   if (completionError) {
@@ -108,6 +117,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     pointsEarned,
     taskTitle: typedTask.title,
+    bonusApplied,
   })
 }
 

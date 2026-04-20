@@ -11,6 +11,7 @@ interface TaskCardProps {
   onUncomplete: (taskId: string) => Promise<void>
   onEdit: (task: TaskWithAssignee) => void
   onDelete: (task: TaskWithAssignee) => void
+  onAssignSelf?: (taskId: string) => Promise<void>
   currentUser: Profile | null
   selectedDate?: Date
 }
@@ -70,10 +71,19 @@ function useDeadlineStatus(task: TaskWithAssignee, isCompleted: boolean, selecte
   return currentStatus
 }
 
-export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, currentUser, selectedDate }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, onAssignSelf, currentUser, selectedDate }: TaskCardProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isUncompleting, setIsUncompleting] = useState(false)
+  const [isAssigningSelf, setIsAssigningSelf] = useState(false)
   const [isCompleted, setIsCompleted] = useState(task.completed)
+
+  const canPickUp =
+    currentUser?.role === 'child' &&
+    !task.assigned_to &&
+    !isCompleted &&
+    !!onAssignSelf
+  const showInitiativeBadge =
+    task.self_assigned && task.assigned_to === currentUser?.id && !isCompleted
 
   // Determine if user can delete this task
   // Parents can delete any task, kids can only delete tasks they created
@@ -98,6 +108,19 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
       console.error('Failed to complete task:', error)
     } finally {
       setIsCompleting(false)
+    }
+  }
+
+  async function handleAssignSelf() {
+    /* istanbul ignore next -- defensive guard; button only renders when onAssignSelf is provided */
+    if (!onAssignSelf || isAssigningSelf) return
+    setIsAssigningSelf(true)
+    try {
+      await onAssignSelf(task.id)
+    } catch (error) {
+      console.error('Failed to pick up task:', error)
+    } finally {
+      setIsAssigningSelf(false)
     }
   }
 
@@ -246,7 +269,34 @@ export function TaskCard({ task, onComplete, onUncomplete, onEdit, onDelete, cur
                 {task.recurring === 'daily' ? 'Daily' : 'Weekly'}
               </span>
             )}
+
+            {showInitiativeBadge && (
+              <span
+                data-testid="initiative-badge"
+                className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 flex items-center gap-1"
+                title="Bonus +50% points for picking this up"
+              >
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                Initiative +50%
+              </span>
+            )}
           </div>
+
+          {canPickUp && (
+            <button
+              onClick={handleAssignSelf}
+              disabled={isAssigningSelf}
+              data-testid="pick-up-task"
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition disabled:opacity-60"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+              </svg>
+              {isAssigningSelf ? 'Picking up…' : "I'll do it! (+50% bonus)"}
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">

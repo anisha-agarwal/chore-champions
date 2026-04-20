@@ -28,6 +28,7 @@ const mockTask = {
   created_by: 'user-1',
   created_at: '2024-01-01T00:00:00Z',
   end_date: null,
+  self_assigned: false,
   profiles: { id: 'child-1', display_name: 'Timmy', avatar_url: null, nickname: 'Little T' },
 }
 

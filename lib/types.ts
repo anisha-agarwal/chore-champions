@@ -67,6 +67,7 @@ export type Database = {
           due_date: string | null
           due_time: string | null
           completed: boolean
+          self_assigned: boolean
           created_by: string | null
           created_at: string
         }
@@ -82,6 +83,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           completed?: boolean
+          self_assigned?: boolean
           created_by?: string | null
           created_at?: string
         }
@@ -97,6 +99,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           completed?: boolean
+          self_assigned?: boolean
           created_by?: string | null
           created_at?: string
         }
@@ -109,6 +112,7 @@ export type Database = {
           completed_at: string
           points_earned: number
           completion_date: string | null
+          bonus_applied: boolean
         }
         Insert: {
           id?: string
@@ -117,6 +121,7 @@ export type Database = {
           completed_at?: string
           points_earned: number
           completion_date?: string | null
+          bonus_applied?: boolean
         }
         Update: {
           id?: string
@@ -125,6 +130,7 @@ export type Database = {
           completed_at?: string
           points_earned?: number
           completion_date?: string | null
+          bonus_applied?: boolean
         }
       }
       family_invites: {

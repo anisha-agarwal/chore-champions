@@ -33,6 +33,29 @@ async function createTaskForChild(taskName: string): Promise<void> {
   `)
 }
 
+/**
+ * Creates an unassigned task in the E2E test family. The created_by is set to
+ * the child so the child has permission to see it; assigned_to is left NULL.
+ */
+async function createUnassignedTask(taskName: string, points: number): Promise<void> {
+  await runSQL(`
+    INSERT INTO tasks (title, points, due_date, family_id, created_by, assigned_to)
+    SELECT
+      '${taskName}',
+      ${points},
+      CURRENT_DATE,
+      p.family_id,
+      p.id,
+      NULL
+    FROM profiles p
+    JOIN auth.users u ON u.id = p.id
+    JOIN families f ON f.id = p.family_id
+    WHERE u.email = '${TEST_CHILD_EMAIL}'
+      AND f.name = '${TEST_FAMILY_NAME}'
+    LIMIT 1;
+  `)
+}
+
 test.describe('Child Permissions', () => {
   // Use child authentication
   test.use({ storageState: '.auth/child.json' })
@@ -208,6 +231,55 @@ test.describe('Child Permissions', () => {
 
     // Should see profile
     await expect(page.getByText('My Profile')).toBeVisible()
+  })
+
+  test('child sees "I\'ll do it!" button on unassigned tasks', async ({ page }) => {
+    const taskName = `Unassigned Pickup ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    await createUnassignedTask(taskName, 10)
+    await page.reload()
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
+
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible({ timeout: 5000 })
+    await expect(taskCard.getByTestId('pick-up-task')).toBeVisible()
+  })
+
+  test('child picks up unassigned task, sees initiative badge, earns 1.5x points', async ({ page }) => {
+    const taskName = `Initiative Flow ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Base: 10 pts → expected with 50% bonus: 15 pts
+    await createUnassignedTask(taskName, 10)
+    await page.reload()
+    await expect(page.locator('.animate-spin')).not.toBeVisible({ timeout: 10000 })
+
+    // Read starting points
+    const before = parseInt((await page.locator('header .text-purple-600').textContent()) || '0', 10)
+
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard).toBeVisible({ timeout: 5000 })
+
+    // Pick up the task
+    await taskCard.getByTestId('pick-up-task').click()
+
+    // The pick-up button disappears and the initiative badge appears
+    await expect(taskCard.getByTestId('pick-up-task')).not.toBeVisible({ timeout: 5000 })
+    await expect(taskCard.getByTestId('initiative-badge')).toBeVisible()
+
+    // Complete the task
+    await taskCard.locator('button.border-gray-300').click()
+    await expect(taskCard.locator('button.bg-green-500')).toBeVisible({ timeout: 5000 })
+
+    // Wait for points to update and check we earned 15 pts (10 + 50% bonus)
+    await page.waitForTimeout(800)
+    const after = parseInt((await page.locator('header .text-purple-600').textContent()) || '0', 10)
+    expect(after - before).toBe(15)
+
+    // Cleanup: undo so teardown can delete
+    await taskCard.locator('button.bg-green-500').click()
+    await expect(taskCard.locator('button.border-gray-300')).toBeVisible({ timeout: 5000 })
   })
 
   test('child can change their own avatar', async ({ page }) => {

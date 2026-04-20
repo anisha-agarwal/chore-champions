@@ -37,6 +37,7 @@ const mockTask: TaskWithAssignee = {
   due_date: '2024-01-15',
   due_time: null,
   completed: false,
+  self_assigned: false,
   created_by: 'user-2',
   created_at: '2024-01-01T00:00:00Z',
   profiles: {
@@ -505,6 +506,95 @@ describe('TaskCard', () => {
       await act(async () => {
         resolveComplete!()
       })
+    })
+  })
+
+  describe('Initiative bonus (pick up unassigned task)', () => {
+    const unassignedTask: TaskWithAssignee = {
+      ...mockTask,
+      assigned_to: null,
+      profiles: null,
+    }
+
+    it('shows "I\'ll do it!" button for a kid viewing an unassigned task', () => {
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.getByTestId('pick-up-task')).toBeInTheDocument()
+    })
+
+    it('does not show the button to a parent', () => {
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={jest.fn()} currentUser={mockParentUser} />)
+      expect(screen.queryByTestId('pick-up-task')).not.toBeInTheDocument()
+    })
+
+    it('does not show the button when the task is already assigned', () => {
+      render(<TaskCard task={mockTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.queryByTestId('pick-up-task')).not.toBeInTheDocument()
+    })
+
+    it('does not show the button when onAssignSelf is not provided', () => {
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.queryByTestId('pick-up-task')).not.toBeInTheDocument()
+    })
+
+    it('calls onAssignSelf with the task id when clicked', async () => {
+      const handleAssignSelf = jest.fn().mockResolvedValue(undefined)
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={handleAssignSelf} currentUser={mockChildUser} />)
+      await userEvent.click(screen.getByTestId('pick-up-task'))
+      expect(handleAssignSelf).toHaveBeenCalledWith('task-1')
+    })
+
+    it('prevents double-submission while in-flight', async () => {
+      let resolve: () => void
+      const handleAssignSelf = jest.fn().mockImplementation(() => new Promise<void>(r => { resolve = r }))
+      const user = userEvent.setup()
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={handleAssignSelf} currentUser={mockChildUser} />)
+      const btn = screen.getByTestId('pick-up-task')
+      await user.click(btn)
+      await user.click(btn)
+      expect(handleAssignSelf).toHaveBeenCalledTimes(1)
+      await act(async () => { resolve!() })
+    })
+
+    it('logs a console error when the assign fails', async () => {
+      const handleAssignSelf = jest.fn().mockRejectedValue(new Error('boom'))
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+      render(<TaskCard task={unassignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onAssignSelf={handleAssignSelf} currentUser={mockChildUser} />)
+      await userEvent.click(screen.getByTestId('pick-up-task'))
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to pick up task:', expect.any(Error))
+      })
+      consoleSpy.mockRestore()
+    })
+
+    it('shows initiative badge when task is self-assigned by the current user', () => {
+      const selfAssignedTask: TaskWithAssignee = {
+        ...mockTask,
+        assigned_to: mockChildUser.id,
+        self_assigned: true,
+      }
+      render(<TaskCard task={selfAssignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.getByTestId('initiative-badge')).toBeInTheDocument()
+    })
+
+    it('does not show initiative badge when a different user is assigned', () => {
+      const selfAssignedTask: TaskWithAssignee = {
+        ...mockTask,
+        assigned_to: 'other-child',
+        self_assigned: true,
+      }
+      render(<TaskCard task={selfAssignedTask} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.queryByTestId('initiative-badge')).not.toBeInTheDocument()
+    })
+
+    it('hides initiative badge once the task is completed', () => {
+      const done: TaskWithAssignee = {
+        ...mockTask,
+        assigned_to: mockChildUser.id,
+        self_assigned: true,
+        completed: true,
+      }
+      render(<TaskCard task={done} onComplete={jest.fn()} onUncomplete={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} currentUser={mockChildUser} />)
+      expect(screen.queryByTestId('initiative-badge')).not.toBeInTheDocument()
     })
   })
 
