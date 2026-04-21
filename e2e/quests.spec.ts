@@ -567,6 +567,24 @@ test.describe('Quests Page', () => {
     await expect(avatar).toHaveAttribute('title', memberName!)
   })
 
+  test('parent does not see "I\'ll do it!" button on unassigned tasks', async ({ page }) => {
+    const taskName = `Parent Unassigned View ${Date.now()}`
+    createdTaskNames.push(taskName)
+
+    // Create an unassigned task via the UI (parent doesn't pick any assignee)
+    const fab = page.getByTestId('add-quest-fab')
+    await fab.click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).toBeVisible()
+    await page.getByPlaceholder(/clean your room/i).fill(taskName)
+    // Leave assignee as default (Anyone = unassigned)
+    await page.getByRole('button', { name: /create quest/i }).click()
+    await expect(page.getByRole('heading', { name: 'New Quest' })).not.toBeVisible()
+    await expect(page.getByText(taskName)).toBeVisible({ timeout: 5000 })
+
+    const taskCard = getTaskCard(page, taskName)
+    await expect(taskCard.getByTestId('pick-up-task')).not.toBeVisible()
+  })
+
   test('time filter filters tasks', async ({ page }) => {
     // Look for time filter buttons
     const morningFilter = page.getByRole('button', { name: /morning/i })

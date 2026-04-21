@@ -67,6 +67,8 @@ const TASK = {
   due_date: null,
   family_id: 'fam-1',
   completed: false,
+  assigned_to: null,
+  self_assigned: false,
 }
 
 const PROFILE = { family_id: 'fam-1' }
@@ -291,6 +293,101 @@ describe('POST /api/tasks/complete', () => {
     const res = await POST(makeRequest({ taskId: 'task-1' }))
     const body = await res.json()
     expect(body.pointsEarned).toBe(10)
+  })
+
+  it('applies 50% initiative bonus when self-assigned and completed by assignee', async () => {
+    const selfTask = { ...TASK, assigned_to: 'child-1', self_assigned: true }
+    const insertSpy = jest.fn(() => Promise.resolve({ error: null }))
+    let call = 0
+    mockFrom.mockImplementation(() => {
+      call++
+      if (call === 1) return selectChain(PROFILE)
+      if (call === 2) return selectChain(selfTask)
+      if (call === 3) return updateChain()
+      return { insert: insertSpy }
+    })
+
+    const res = await POST(makeRequest({ taskId: 'task-1' }))
+    const body = await res.json()
+    expect(body.pointsEarned).toBe(15) // 10 * 1.5
+    expect(body.bonusApplied).toBe(true)
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      points_earned: 15,
+      bonus_applied: true,
+    }))
+  })
+
+  it('rounds bonus up for odd base points', async () => {
+    const selfTask = { ...TASK, points: 7, assigned_to: 'child-1', self_assigned: true }
+    let call = 0
+    mockFrom.mockImplementation(() => {
+      call++
+      if (call === 1) return selectChain(PROFILE)
+      if (call === 2) return selectChain(selfTask)
+      if (call === 3) return updateChain()
+      return insertChain()
+    })
+
+    const res = await POST(makeRequest({ taskId: 'task-1' }))
+    const body = await res.json()
+    expect(body.pointsEarned).toBe(11) // ceil(7 * 1.5)
+  })
+
+  it('stacks bonus on top of overdue-halved points', async () => {
+    const selfOverdue = {
+      ...TASK,
+      due_time: '08:00:00',
+      due_date: '2020-01-01',
+      assigned_to: 'child-1',
+      self_assigned: true,
+    }
+    let call = 0
+    mockFrom.mockImplementation(() => {
+      call++
+      if (call === 1) return selectChain(PROFILE)
+      if (call === 2) return selectChain(selfOverdue)
+      if (call === 3) return updateChain()
+      return insertChain()
+    })
+
+    const res = await POST(makeRequest({ taskId: 'task-1' }))
+    const body = await res.json()
+    expect(body.pointsEarned).toBe(8) // ceil(floor(10/2) * 1.5) = ceil(7.5)
+    expect(body.bonusApplied).toBe(true)
+  })
+
+  it('does not apply bonus when self_assigned but a different user completes', async () => {
+    const selfTask = { ...TASK, assigned_to: 'other-child', self_assigned: true }
+    let call = 0
+    mockFrom.mockImplementation(() => {
+      call++
+      if (call === 1) return selectChain(PROFILE)
+      if (call === 2) return selectChain(selfTask)
+      if (call === 3) return updateChain()
+      return insertChain()
+    })
+
+    const res = await POST(makeRequest({ taskId: 'task-1' }))
+    const body = await res.json()
+    expect(body.pointsEarned).toBe(10)
+    expect(body.bonusApplied).toBe(false)
+  })
+
+  it('does not apply bonus when assigned_to matches user but self_assigned is false', async () => {
+    const assignedTask = { ...TASK, assigned_to: 'child-1', self_assigned: false }
+    let call = 0
+    mockFrom.mockImplementation(() => {
+      call++
+      if (call === 1) return selectChain(PROFILE)
+      if (call === 2) return selectChain(assignedTask)
+      if (call === 3) return updateChain()
+      return insertChain()
+    })
+
+    const res = await POST(makeRequest({ taskId: 'task-1' }))
+    const body = await res.json()
+    expect(body.pointsEarned).toBe(10)
+    expect(body.bonusApplied).toBe(false)
   })
 })
 

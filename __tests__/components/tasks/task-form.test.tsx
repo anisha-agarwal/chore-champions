@@ -41,6 +41,7 @@ const mockTask: TaskWithAssignee = {
   due_date: '2024-01-15',
   due_time: null,
   completed: false,
+  self_assigned: false,
   created_by: 'user-2',
   created_at: '2024-01-01T00:00:00Z',
   profiles: {

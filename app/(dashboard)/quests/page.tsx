@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { WeekPicker } from '@/components/layout/week-picker'
 import { TimeFilter } from '@/components/tasks/time-filter'
@@ -171,10 +172,16 @@ export default function QuestsPage() {
     }
 
     if (taskId) {
-      // Update existing task
+      // A parent-driven change to assigned_to overrides any prior self-assignment,
+      // so the kid no longer gets an initiative bonus for completing it.
+      const assigneeChanged = editingTask?.assigned_to !== taskData.assigned_to
+      const updateFields = assigneeChanged
+        ? { ...baseFields, self_assigned: false }
+        : baseFields
+
       const { error } = await supabase
         .from('tasks')
-        .update(baseFields)
+        .update(updateFields)
         .eq('id', taskId)
 
       if (error) throw error
@@ -293,8 +300,29 @@ export default function QuestsPage() {
       throw new Error(data.error || 'Failed to complete task')
     }
 
-    const { pointsEarned } = await res.json()
+    const { pointsEarned, bonusApplied } = await res.json()
+    if (bonusApplied) {
+      toast.success(`Initiative bonus! +${pointsEarned} points`, {
+        icon: '\u26A1',
+        duration: 4000,
+      })
+    }
     showEncouragement({ task, pointsEarned, currentUser: currentUser!, tasks })
+    fetchData()
+  }
+
+  async function handleAssignSelf(taskId: string) {
+    const res = await fetch('/api/tasks/assign-self', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || 'Failed to pick up task')
+    }
+
     fetchData()
   }
 
@@ -407,6 +435,7 @@ export default function QuestsPage() {
         onUncomplete={handleUncompleteTask}
         onEdit={handleEditTask}
         onDelete={handleDeleteClick}
+        onAssignSelf={handleAssignSelf}
         currentUser={currentUser}
         emptyMessage="No quests for this day. Add one!"
         dateKey={toDateString(selectedDate)}

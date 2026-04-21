@@ -23,6 +23,14 @@ jest.mock('@/lib/hooks/use-encouragement', () => ({
   useEncouragement: () => ({ showEncouragement: mockShowEncouragement }),
 }))
 
+// Mock sonner toast — used by the initiative-bonus completion path
+const mockToastSuccess = jest.fn()
+jest.mock('sonner', () => ({
+  toast: Object.assign(jest.fn(), {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+  }),
+}))
+
 // Mock data
 const mockUser = { id: 'user-1', email: 'test@example.com' }
 const mockProfile = {
@@ -1059,6 +1067,47 @@ describe('QuestsPage', () => {
     })
   })
 
+  describe('handleSubmitTask clears self_assigned when parent reassigns', () => {
+    it('includes self_assigned=false in the update when the assignee changes', async () => {
+      // Start with the task assigned to a specific child so we can change it
+      mockOneTimeTasksData.current = [{
+        ...mockTasks[0],
+        assigned_to: 'child-1',
+        self_assigned: true,
+      }]
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTitle('Edit quest'))
+      await waitFor(() => {
+        expect(screen.getByText('Edit Quest')).toBeInTheDocument()
+      })
+
+      // Change the "Assign To" select (3rd select) to a different option.
+      // Options include the family members; pick "Anyone" (unassigned) which
+      // differs from the current child-1 assignment.
+      const selects = document.querySelectorAll('select')
+      const assignSelect = selects[2] as HTMLSelectElement
+      await user.selectOptions(assignSelect, '')
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalled()
+      })
+      const updatePayload = mockUpdate.mock.calls[0][0] as Record<string, unknown>
+      expect(updatePayload.self_assigned).toBe(false)
+
+      // Restore for later tests
+      mockOneTimeTasksData.current = mockTasks
+    })
+  })
+
   describe('handleSubmitTask error on update', () => {
     it('shows error when task update fails (line 178)', async () => {
       mockUpdate.mockResolvedValue({ error: { message: 'Update failed' } })
@@ -1201,6 +1250,160 @@ describe('QuestsPage', () => {
         expect(consoleSpy).toHaveBeenCalledWith('Failed to complete task:', expect.objectContaining({ message: 'Failed to complete task' }))
       })
       consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Initiative bonus (handleCompleteTask)', () => {
+    it('shows bonus toast when the completion response returns bonusApplied=true', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ pointsEarned: 15, bonusApplied: true }),
+      })
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockToastSuccess).toHaveBeenCalledWith(
+          'Initiative bonus! +15 points',
+          expect.objectContaining({ duration: 4000 }),
+        )
+      })
+    })
+
+    it('does not show bonus toast when bonusApplied is false', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ pointsEarned: 10, bonusApplied: false }),
+      })
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Clean Room')).toBeInTheDocument()
+      })
+
+      const taskCard = screen.getByText('Clean Room').closest('div[class*="bg-white rounded-xl"]')!
+      const checkbox = taskCard.querySelector('button')!
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(mockShowEncouragement).toHaveBeenCalled()
+      })
+      expect(mockToastSuccess).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('handleAssignSelf (pick up unassigned task)', () => {
+    const mockChildProfile = {
+      ...mockProfile,
+      id: 'child-1',
+      display_name: 'Timmy',
+      nickname: 'Little T',
+      role: 'child',
+    }
+
+    const unassignedTask = {
+      ...mockTasks[0],
+      id: 'task-unassigned',
+      title: 'Unassigned Chore',
+      assigned_to: null,
+      profiles: null,
+    }
+
+    it('POSTs to /api/tasks/assign-self when kid clicks the pick-up button', async () => {
+      mockProfileData.current = mockChildProfile
+      mockOneTimeTasksData.current = [unassignedTask]
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) })
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unassigned Chore')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('pick-up-task'))
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/tasks/assign-self',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ taskId: 'task-unassigned' }),
+          }),
+        )
+      })
+
+      // Restore state for other tests
+      mockProfileData.current = mockProfile
+      mockOneTimeTasksData.current = mockTasks
+    })
+
+    it('surfaces the API error message when the pick-up request fails', async () => {
+      mockProfileData.current = mockChildProfile
+      mockOneTimeTasksData.current = [unassignedTask]
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Task is already assigned' }),
+      })
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unassigned Chore')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('pick-up-task'))
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to pick up task:',
+          expect.objectContaining({ message: 'Task is already assigned' }),
+        )
+      })
+      consoleSpy.mockRestore()
+
+      mockProfileData.current = mockProfile
+      mockOneTimeTasksData.current = mockTasks
+    })
+
+    it('falls back to a generic message when the error response has no error field', async () => {
+      mockProfileData.current = mockChildProfile
+      mockOneTimeTasksData.current = [unassignedTask]
+      mockFetch.mockResolvedValue({ ok: false, json: () => Promise.resolve({}) })
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
+      const user = userEvent.setup()
+      render(<QuestsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unassigned Chore')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('pick-up-task'))
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to pick up task:',
+          expect.objectContaining({ message: 'Failed to pick up task' }),
+        )
+      })
+      consoleSpy.mockRestore()
+
+      mockProfileData.current = mockProfile
+      mockOneTimeTasksData.current = mockTasks
     })
   })
 
