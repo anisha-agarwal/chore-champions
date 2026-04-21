@@ -15,9 +15,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
+          # Supabase now rejects anon keys on /rest/v1/. Ping a public RPC
+          # instead — get_family_by_invite_code is SECURITY DEFINER and
+          # accepts the anon key. An unknown code returns an empty set.
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-            "${SUPABASE_URL}/rest/v1/" \
+            -X POST "${SUPABASE_URL}/rest/v1/rpc/get_family_by_invite_code" \
             -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"code":"keepalive"}')
           echo "Supabase responded with HTTP ${STATUS}"
           [ "$STATUS" -eq 200 ]
