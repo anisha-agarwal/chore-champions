@@ -13,36 +13,36 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock Supabase client
-const mockRpc = jest.fn()
+const mockGetFamilyByInviteCode = jest.fn() // RPC: get_family_by_invite_code (returns family details for the pre-check)
+const mockJoinFamilyViaInviteCode = jest.fn() // RPC: join_family_via_invite_code (the actual mutation)
 const mockSignUp = jest.fn()
-const mockUpdate = jest.fn()
 
 jest.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       signUp: mockSignUp,
     },
-    rpc: (...args: unknown[]) => ({
-      single: () => mockRpc(...args),
-    }),
-    from: () => ({
-      update: (...args: unknown[]) => ({
-        eq: (...eqArgs: unknown[]) => mockUpdate(...args, ...eqArgs),
-      }),
-    }),
+    rpc: (name: string, args?: unknown) => {
+      if (name === 'get_family_by_invite_code') {
+        // The page chains .single() on this RPC.
+        return { single: () => mockGetFamilyByInviteCode(args) }
+      }
+      // join_family_via_invite_code is awaited directly.
+      return mockJoinFamilyViaInviteCode(args)
+    },
   }),
 }))
 
 describe('Join Family Page (with code)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRpc.mockResolvedValue({ data: { id: 'family-1', name: 'The Smiths' }, error: null })
+    mockGetFamilyByInviteCode.mockResolvedValue({ data: { id: 'family-1', name: 'The Smiths' }, error: null })
+    mockJoinFamilyViaInviteCode.mockResolvedValue({ data: 'family-1', error: null })
     mockSignUp.mockResolvedValue({ data: { user: { id: 'new-user' } }, error: null })
-    mockUpdate.mockResolvedValue({ error: null })
   })
 
   it('shows checking state initially', () => {
-    mockRpc.mockReturnValue(new Promise(() => {}))
+    mockGetFamilyByInviteCode.mockReturnValue(new Promise(() => {}))
     render(<JoinFamilyPage />)
     expect(screen.getByText('Checking invite code...')).toBeInTheDocument()
   })
@@ -61,7 +61,7 @@ describe('Join Family Page (with code)', () => {
   })
 
   it('shows invalid invite when code is bad', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Not found' } })
+    mockGetFamilyByInviteCode.mockResolvedValue({ data: null, error: { message: 'Not found' } })
 
     render(<JoinFamilyPage />)
 
@@ -111,8 +111,8 @@ describe('Join Family Page (with code)', () => {
     })
   })
 
-  it('shows error when profile update fails', async () => {
-    mockUpdate.mockResolvedValue({ error: { message: 'Profile update failed' } })
+  it('shows error when join_family_via_invite_code RPC fails', async () => {
+    mockJoinFamilyViaInviteCode.mockResolvedValue({ data: null, error: { message: 'RPC failed' } })
 
     render(<JoinFamilyPage />)
 

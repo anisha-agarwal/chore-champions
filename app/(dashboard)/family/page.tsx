@@ -86,29 +86,16 @@ export default function FamilyPage() {
     setCreating(true)
     setError(null)
 
-    // Create family
-    const { data: newFamily, error: familyError } = await supabase
-      .from('families')
-      .insert({ name: familyName.trim() })
-      .select()
-      .single()
+    // Server-side RPC creates the family and elevates the caller to parent
+    // atomically — direct UPDATEs to role/family_id are blocked by the
+    // profile-update trigger (migration 022).
+    const { error: rpcError } = await supabase.rpc('create_family_as_parent', {
+      p_name: familyName.trim(),
+    })
 
-    if (familyError || !newFamily) {
-      console.error('Failed to create family:', familyError)
-      setError('Failed to create family: ' + (familyError?.message || 'Unknown error'))
-      setCreating(false)
-      return
-    }
-
-    // Update profile with family_id and make them a parent
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ family_id: newFamily.id, role: 'parent' })
-      .eq('id', currentUser.id)
-
-    if (profileError) {
-      console.error('Failed to update profile:', profileError)
-      setError('Failed to update profile: ' + profileError.message)
+    if (rpcError) {
+      console.error('Failed to create family:', rpcError)
+      setError('Failed to create family: ' + rpcError.message)
       setCreating(false)
       return
     }
