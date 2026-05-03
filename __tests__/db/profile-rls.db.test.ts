@@ -148,14 +148,14 @@ describe('create_family_as_parent + join_family_via_invite_code RPCs', () => {
   })
 
   afterEach(async () => {
-    // Drop any family the transient user may have created so reruns
-    // don't accumulate. Look up via the profile (which still exists
-    // because we haven't deleted the auth user yet).
+    // Drop any family the transient user *created* so reruns don't
+    // accumulate. Skip the seed family (which other tests share) when
+    // the transient user merely joined it via invite code.
     const rows = (await runSQL(
       `SELECT family_id FROM profiles WHERE id = '${transientUserId}'`,
     )) as Array<{ family_id: string | null }>
     const fid = rows[0]?.family_id
-    if (fid) {
+    if (fid && fid !== familyId) {
       await runSQL(`DELETE FROM families WHERE id = '${fid}'`)
     }
     await transientClient?.auth.signOut()
