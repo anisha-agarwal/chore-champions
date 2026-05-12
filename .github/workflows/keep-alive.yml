@@ -2,9 +2,10 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Every 3 days — well inside Supabase's ~7-day inactivity window so
-    # one missed run still leaves margin before pause.
-    - cron: '0 8 */3 * *'
+    # Daily at 8am UTC. After two previous failures with a 3-day cadence
+    # (PR #90, PR #109) we burn an extra workflow run rather than risk
+    # another unscheduled pause.
+    - cron: '0 8 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -12,22 +13,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Ping Supabase
+      - name: Authenticated keep-alive
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_EMAIL: ${{ secrets.TEST_PARENT_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PARENT_PASSWORD }}
         run: |
-          # Read-only RPCs do not always count toward Supabase's inactivity
-          # heuristic. The `keepalive_ping` RPC (migration 021) performs a
-          # real UPDATE on a singleton probe row, which is guaranteed to
-          # register as DB activity.
-          RESPONSE=$(curl -sS -w '\n%{http_code}' \
-            -X POST "${SUPABASE_URL}/rest/v1/rpc/keepalive_ping" \
+          set -e
+
+          # Two earlier keep-alive strategies (read-only RPC in PR #90;
+          # SECURITY DEFINER write in PR #109) both failed to register as
+          # activity — Supabase paused the project despite green workflow
+          # runs. SECURITY DEFINER calls are owned by the function owner
+          # and may be filtered out of Supabase's inactivity metric.
+          #
+          # Instead, do two things that are unambiguously real user
+          # activity:
+          #   1. Sign in via GoTrue (real auth event).
+          #   2. Authenticated PostgREST SELECT (real user request, goes
+          #      through RLS as the authenticated role).
+
+          # 1) Sign in.
+          TOKEN_RESPONSE=$(curl -sS -X POST \
+            "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
             -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             -H "Content-Type: application/json" \
-            -d '{}')
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          STATUS=$(echo "$RESPONSE" | tail -n1)
-          echo "Supabase responded with HTTP ${STATUS}: ${BODY}"
-          [ "$STATUS" -eq 200 ]
+            -d "{\"email\":\"${TEST_EMAIL}\",\"password\":\"${TEST_PASSWORD}\"}")
+          ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+          if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+            echo "Sign-in failed: $TOKEN_RESPONSE"
+            exit 1
+          fi
+          echo "Sign-in OK"
+
+          # 2) Authenticated PostgREST SELECT.
+          SELECT_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}")
+          echo "Authenticated SELECT: HTTP ${SELECT_STATUS}"
+          [ "$SELECT_STATUS" -eq 200 ]
