@@ -53,8 +53,8 @@ const mockMembers = [
 
 // Supabase mock
 const mockGetUser = jest.fn()
-const mockInsert = jest.fn()
 const mockUpdate = jest.fn()
+const mockCreateFamilyAsParent = jest.fn() // RPC: replaces the old INSERT+UPDATE family-creation flow
 const mockProfileData = { current: mockProfile as unknown }
 const mockFamilyData = { current: mockFamily as unknown }
 const mockMembersData = { current: mockMembers as unknown[] }
@@ -92,20 +92,14 @@ jest.mock('@/lib/supabase/client', () => ({
           }),
         }
       },
-      insert: (...args: unknown[]) => {
-        const result = mockInsert(...args)
-        return {
-          ...result,
-          select: () => ({
-            single: () => result,
-          }),
-        }
-      },
       update: (...args: unknown[]) => ({
         eq: (...eqArgs: unknown[]) => mockUpdate(...args, ...eqArgs),
       }),
     }),
-    rpc: () => Promise.resolve({ data: [] }),
+    rpc: (name: string, args?: unknown) => {
+      if (name === 'create_family_as_parent') return mockCreateFamilyAsParent(args)
+      return Promise.resolve({ data: [] })
+    },
   }),
 }))
 
@@ -125,7 +119,7 @@ describe('FamilyPage', () => {
     mockProfileData.current = mockProfile
     mockFamilyData.current = mockFamily
     mockMembersData.current = mockMembers
-    mockInsert.mockResolvedValue({ data: { id: 'new-family', name: 'New Family', invite_code: 'XYZ', created_at: '' }, error: null })
+    mockCreateFamilyAsParent.mockResolvedValue({ data: 'new-family-id', error: null })
     mockUpdate.mockResolvedValue({ error: null })
   })
 
@@ -276,7 +270,7 @@ describe('FamilyPage', () => {
       mockFamilyData.current = null
     })
 
-    it('does nothing when family name is empty (line 79 guard)', async () => {
+    it('does nothing when family name is empty (guard)', async () => {
       const { fireEvent: fe } = await import('@testing-library/react')
       render(<FamilyPage />)
 
@@ -288,8 +282,7 @@ describe('FamilyPage', () => {
       const form = document.querySelector('form')!
       fe.submit(form)
 
-      // handleCreateFamily should return early due to empty familyName
-      expect(mockInsert).not.toHaveBeenCalled()
+      expect(mockCreateFamilyAsParent).not.toHaveBeenCalled()
     })
 
     it('shows error when profile is not loaded', async () => {
@@ -306,7 +299,7 @@ describe('FamilyPage', () => {
       consoleSpy.mockRestore()
     })
 
-    it('creates a family successfully', async () => {
+    it('creates a family successfully via create_family_as_parent RPC', async () => {
       const user = userEvent.setup()
       render(<FamilyPage />)
 
@@ -318,13 +311,13 @@ describe('FamilyPage', () => {
       await user.click(screen.getByRole('button', { name: 'Create Family' }))
 
       await waitFor(() => {
-        expect(mockInsert).toHaveBeenCalled()
+        expect(mockCreateFamilyAsParent).toHaveBeenCalledWith({ p_name: 'New Family' })
       })
     })
 
-    it('shows error when family insert fails', async () => {
+    it('shows error when create_family_as_parent RPC fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
-      mockInsert.mockResolvedValue({ data: null, error: { message: 'Insert failed' } })
+      mockCreateFamilyAsParent.mockResolvedValue({ data: null, error: { message: 'RPC failed' } })
 
       const user = userEvent.setup()
       render(<FamilyPage />)
@@ -337,68 +330,7 @@ describe('FamilyPage', () => {
       await user.click(screen.getByRole('button', { name: 'Create Family' }))
 
       await waitFor(() => {
-        expect(screen.getByText(/failed to create family/i)).toBeInTheDocument()
-      })
-      consoleSpy.mockRestore()
-    })
-
-    it('shows Unknown error when familyError has no message (line 98 || branch)', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
-      // Error without message property
-      mockInsert.mockResolvedValue({ data: null, error: {} })
-
-      const user = userEvent.setup()
-      render(<FamilyPage />)
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByLabelText('Family Name'), 'Test Family')
-      await user.click(screen.getByRole('button', { name: 'Create Family' }))
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to create family: Unknown error')).toBeInTheDocument()
-      })
-      consoleSpy.mockRestore()
-    })
-
-    it('shows Unknown error when newFamily is null but no error (line 96 !newFamily branch)', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
-      mockInsert.mockResolvedValue({ data: null, error: null })
-
-      const user = userEvent.setup()
-      render(<FamilyPage />)
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByLabelText('Family Name'), 'Test Family')
-      await user.click(screen.getByRole('button', { name: 'Create Family' }))
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to create family: Unknown error')).toBeInTheDocument()
-      })
-      consoleSpy.mockRestore()
-    })
-
-    it('shows error when profile update fails after family creation', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
-      mockUpdate.mockResolvedValue({ error: { message: 'Update failed' } })
-
-      const user = userEvent.setup()
-      render(<FamilyPage />)
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Family Name')).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByLabelText('Family Name'), 'Test Family')
-      await user.click(screen.getByRole('button', { name: 'Create Family' }))
-
-      await waitFor(() => {
-        expect(screen.getByText(/failed to update profile/i)).toBeInTheDocument()
+        expect(screen.getByText('Failed to create family: RPC failed')).toBeInTheDocument()
       })
       consoleSpy.mockRestore()
     })

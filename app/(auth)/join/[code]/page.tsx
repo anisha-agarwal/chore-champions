@@ -70,14 +70,14 @@ export default function JoinFamilyPage() {
       return
     }
 
-    // Update the profile with family_id and role
+    // Server-side RPC sets family_id atomically — direct UPDATE on profile
+    // family_id is blocked by the profile-update trigger (migration 022).
     if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ family_id: familyId })
-        .eq('id', authData.user.id)
+      const { error: rpcError } = await supabase.rpc('join_family_via_invite_code', {
+        p_code: code,
+      })
 
-      if (profileError) {
+      if (rpcError) {
         setError('Failed to join family. Please try again.')
         setLoading(false)
         return
