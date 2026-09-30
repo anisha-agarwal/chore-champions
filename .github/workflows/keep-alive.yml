@@ -5,6 +5,10 @@ on:
     # Daily at 8am UTC. After two previous failures with a 3-day cadence
     # (PR #90, PR #109) we burn an extra workflow run rather than risk
     # another unscheduled pause.
+    #
+    # NB: cadence was never the weak link. This workflow was auto-disabled
+    # for repo inactivity on 2026-07-17 and the project sat paused for ~68
+    # days. See the heartbeat step at the bottom of this file.
     - cron: '0 8 * * *'
   workflow_dispatch: # Allow manual trigger
 
@@ -12,7 +16,11 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write # the heartbeat step below pushes a commit
     steps:
+      - uses: actions/checkout@v4
+
       - name: Authenticated keep-alive
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -54,3 +62,46 @@ jobs:
             -H "Authorization: Bearer ${ACCESS_TOKEN}")
           echo "Authenticated SELECT: HTTP ${SELECT_STATUS}"
           [ "$SELECT_STATUS" -eq 200 ]
+
+      - name: Heartbeat commit (prevents GitHub auto-disabling this workflow)
+        run: |
+          set -e
+
+          # THE FAILURE THIS FIXES
+          #
+          # GitHub disables `schedule:` workflows after 60 days with no
+          # repository activity. The last commit here was 2026-05-17; this
+          # workflow's last run was 2026-07-17 — 61 days later, state
+          # `disabled_inactivity`. With nothing pinging it, Supabase paused
+          # the project for the following ~68 days and the whole app was
+          # down. The site kept serving (landing and login need no DB), so
+          # nothing looked wrong from the outside.
+          #
+          # Hardening the ping (PR #90, #109, #111) could never have caught
+          # this: the ping was fine, the scheduler was switched off. A cron
+          # that lives in the repo it is protecting dies of the same
+          # dormancy it is meant to survive.
+          #
+          # So: keep the repo just active enough. Commit a timestamp only
+          # when the last commit is older than 45 days, leaving 15 days of
+          # margin under the 60-day cutoff. That is roughly 8 commits a
+          # year, not 365.
+
+          LAST_COMMIT_TS=$(git log -1 --format=%ct)
+          AGE_DAYS=$(( ( $(date +%s) - LAST_COMMIT_TS ) / 86400 ))
+          echo "Last commit: ${AGE_DAYS} days ago (refresh threshold: 45)"
+
+          if [ "$AGE_DAYS" -lt 45 ]; then
+            echo "Repo active enough — no heartbeat needed."
+            exit 0
+          fi
+
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/last-heartbeat.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last-heartbeat.txt
+          git commit \
+            -m "chore: keep-alive heartbeat [skip ci]" \
+            -m "Resets GitHub's 60-day scheduled-workflow inactivity timer so this keep-alive cannot be auto-disabled while the repo is quiet."
+          git push
+          echo "Heartbeat pushed — inactivity timer reset."
